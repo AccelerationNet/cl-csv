@@ -1,0 +1,8 @@
+.svn
+build
+dist
+*~
+*#
+*.fasl
+.git
+_darcs
