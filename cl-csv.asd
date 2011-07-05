@@ -7,6 +7,10 @@
 
 (in-package cl-csv.system)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-system 'asdf-system-connections nil)
+    (asdf:operate 'asdf:load-op 'asdf-system-connections)))
+
 (defsystem :cl-csv
   :description "Facilities for reading and writing CSV format files"
   :licence "BSD"
@@ -28,6 +32,16 @@
   (asdf:oos 'asdf:load-op :cl-csv-test)
   (let ((*package* (find-package :cl-csv-test)))
     (eval (read-from-string "(run-tests)"))))
+
+(asdf:defsystem-connection cl-csv-clsql
+  :description "the part of adwcode base dedicated to postgresql"
+  :requires (:clsql-helper :cl-csv)
+  :components ((:file "clsql")))
+
+(asdf:defsystem-connection cl-csv-data-table
+  :description "the part of adwcode base dedicated to postgresql"
+  :requires (:data-table :cl-csv)
+  :components ((:file "data-table")))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
