@@ -82,3 +82,7 @@ Russ,Tyndall,\"Software Developer's,
  \"Position\""
         (third (second data)))
     (assert-equal data data2)))
+
+(define-test data-with-whitespace
+  (let ((data (read-csv-row "  first    ,     last ,  \" other \"  ")))
+    (assert-equal '("first" "last" " other ") data)))

@@ -109,24 +109,37 @@
      (in-stream (%stream stream-or-string))
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     line llen c skip)
+     line llen c)
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
   ;; giant state machine parser
+  ;; states:
+  ;;    waiting: we are between inputs, or have not started reading yet
+  ;;    collecting: collecting unquoted data
+  ;;    collecting-quoted: collecting quoted data
+  ;;    waiting-on-next: done collecting quoted data, now waitin for a
+  ;;        separator, or the next data to begin
   (iter
     (for i upfrom 0)
     (setf c (%char-at line i))
-    (labels ((store-char (&optional char)
+    (labels ((current-last-char ()
+               (%char-at current (- (fill-pointer current) 1)))
+             (store-char (&optional char)
                (vector-push-extend char current))
              (finish-item ()
+               ;; trim off unquoted whitespace at the end
+               (when (eql state :collecting)
+                 (iter (while (white-space? (current-last-char)))
+                   (decf (fill-pointer current))))
+               ;; collect the result
                (collect (copy-seq (string current)) into items)
+               ;; go back to waiting for items
                (setf state :waiting)
                (setf (fill-pointer current) 0))
              (skip-escape ()
                ;; we just read the first escape char
-               (setf skip (- (length escape) 1))
-               (setf state :escaping))
+               (incf i (- (length escape) 1)))
              (read-line-in ()
                (handler-case
                    ;; reset index, line and len for the next line of data
@@ -151,10 +164,6 @@
             (store-char #\newline)
             (read-line-in))
            (T (finish-item) (return items))))
-
-        ;; this state handles skipping the characters in an escape sequence
-        ((eql state :escaping)
-         (when (zerop (decf skip)) (setf state :collecting-quoted)))
 
         ;; the next characters are an escape sequence, start skipping
         ((%escape-seq? line i escape)
