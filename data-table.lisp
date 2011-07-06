@@ -5,8 +5,7 @@
   (let* ((dt (make-instance 'data-table:data-table))
          (data (read-csv
                 file
-                :row-fn (lambda (row) (mapcar #'data-table::trim-and-nullify
-                                         row)))))
+                :map-fn (lambda (row) (mapcar #'data-table::trim-and-nullify row)))))
     (if has-column-names
         (setf
          (data-table:column-names dt) (first data)

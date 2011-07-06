@@ -35,7 +35,7 @@
 
 (asdf:defsystem-connection cl-csv-clsql
   :description "the part of adwcode base dedicated to postgresql"
-  :requires (:clsql-helper :cl-csv)
+  :requires (:clsql-helper :cl-csv :data-table)
   :components ((:file "clsql")))
 
 (asdf:defsystem-connection cl-csv-data-table

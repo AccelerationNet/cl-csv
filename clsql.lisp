@@ -27,26 +27,20 @@
                                (schema "public") (downcase-columns T)
                                (progress-stream T) (progress-mod 5000))
   "Will make a best effor to create a table matching the csv's schema and then "
+  (let ((cnt 0) columns)
+    (flet ((row-fn (row)
+             (if (= cnt 0)
+                 (setf columns
+                       (mapcar
+                        (lambda (x) (trim-and-nullify
+                                (if downcase-columns (nstring-downcase x) x)))
+                        row))
+                 (clsql-sys:insert-records
+                  :into (clsql-sys:sql-expression :string #?"${schema}.${table-name}")
+                  :attributes columns
+                  :values row))
+             (incf cnt)
+             (when (zerop (mod progress progress-mod))
+               (format progress-stream "Imported ~D rows~%" progress ))))))
   (with-input-from-file (s file)
-    (let* ((cl-interpol:*list-delimiter* ",")
-           (*print-pretty* nil)
-           (columns (iter (for x in (cl-ppcre:split
-                                     #?"(\"|\\s|,)+"
-                                     (dos-safe-read-line s) :omit-unmatched-p T))
-                          ;; the first column might be empty string due to leading
-                          ;; single quote
-                          (awhen (trim-and-nullify
-                                  (if downcase-columns (nstring-downcase x) x))
-                            (collect (clsql-sys:sql-expression :attribute it)))
-
-                          )))
-      (iter (for line in-stream s using #'dos-safe-read-line)
-            (for data = (parse-csv-string line))
-            (counting line into progress )
-            (clsql-sys:insert-records
-             :into (clsql-sys:sql-expression :string #?"${schema}.${table-name}")
-             :attributes columns
-             :values data)
-            (when (zerop (mod progress progress-mod))
-              (format progress-stream "Imported ~D rows~%" progress )))
-      )))
+    (read-csv s :row-fn #'row-fn)))

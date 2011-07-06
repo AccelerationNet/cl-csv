@@ -119,7 +119,7 @@
   ;;    collecting: collecting unquoted data
   ;;    collecting-quoted: collecting quoted data
   ;;    waiting-on-next: done collecting quoted data, now waitin for a
-  ;;        separator, or the next data to begin
+  ;;        separator
   (iter
     (for i upfrom 0)
     (setf c (%char-at line i))
