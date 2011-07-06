@@ -3,7 +3,7 @@
 (cl:defpackage :cl-csv
   (:use :cl :cl-user :iter)
   (:export :read-csv :csv-parse-error :format-csv-value
-   :write-csv-value :write-line-csv :read-csv-row :write-csv :read-csv
+   :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*newline* :*quote-escape*))
 
 (in-package :cl-csv)
@@ -53,13 +53,13 @@
         (write-char char csv-stream)))
   (write-char quote csv-stream))
 
-(defun write-line-csv (items
-                       &key
-                       stream
-                       (quote *quote*)
-                       (escape *quote-escape*)
-                       (separator *separator*)
-                       (newline *newline*))
+(defun write-csv-row (items
+                      &key
+                      stream
+                      (quote *quote*)
+                      (escape *quote-escape*)
+                      (separator *separator*)
+                      (newline *newline*))
   "Write the list ITEMS to stream."
   (let ((csv-stream (or stream (make-string-output-stream))))
     (iter (for item in items)
@@ -79,8 +79,8 @@
                   (newline *newline*))
   (let ((csv-stream (or stream (make-string-output-stream))))
     (iter (for row in rows-of-items)
-      (write-line-csv row :stream csv-stream :quote quote :separator separator
-                          :escape escape :newline newline))
+      (write-csv-row row :stream csv-stream :quote quote :separator separator
+                         :escape escape :newline newline))
     (unless stream
       (get-output-stream-string csv-stream))))
 
