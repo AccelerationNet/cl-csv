@@ -32,21 +32,53 @@ Bill,Shakespear,Bard,12.2,5
 James,Kirk,Starship Captain,13.1,6
 ")
 
-(define-test verify-parsing-1
+(defparameter *test-csv-no-trailing-newline*
+  "first name,last name,\"job \"\"title\"\"\",number of hours,id
+Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1")
+
+(defparameter *test-csv-data-with-newlines*
+  "first name,last name,\"job \"\"title\"\"\",number of hours,id
+Russ,Tyndall,\"Software Developer's,
+ \"\"Position\"\"\",26.2,1")
+
+(define-test parsing-1
   (assert-equal *test-csv1-rows* (read-csv *test-csv1*))
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
 
-(define-test verify-writing-1
+(define-test writing-1
   (assert-equal *test-csv1* (write-csv *test-csv1-rows*)))
 
-(define-test verify-parsing-errors
+(define-test parsing-errors
   (assert-error 'csv-parse-error
-      (read-line-csv
+      (read-csv-row
        "first name, a test\" broken quote, other stuff"))
   (assert-error 'csv-parse-error
-      (read-line-csv
+      (read-csv-row
        "first name,\"a test broken quote\" what are these chars, other stuff"))
   (assert-error 'csv-parse-error
-      (read-line-csv
+      (read-csv-row
        "first name,\"a test unfinished quote, other stuff"))
+  (assert-eql 3 (length (read-csv-row "first name, \"a test broken quote\", other stuff")))
   )
+
+(define-test no-trailing-parse
+  (let* ((data (read-csv *test-csv-no-trailing-newline*))
+         (str (write-csv data))
+         (data2 (read-csv str)))
+    (assert-equal 2 (length data))
+    (assert-equal 5 (length (first data)))
+    (assert-equal 5 (length (second data)))
+    (assert-equal data data2)))
+
+(define-test data-with-newlines
+  (let* ((data (read-csv *test-csv-data-with-newlines*))
+         (str (write-csv data))
+         (data2 (read-csv str)))
+    (assert-equal 2 (length data))
+    (assert-equal 5 (length (first data)))
+    (assert-equal 5 (length (second data)))
+    (assert-equal
+        "Software Developer's,
+ \"Position\""
+        (third (second data)))
+    (assert-equal data data2)))
