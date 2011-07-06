@@ -99,24 +99,27 @@
     (string (make-string-input-stream stream-or-string))
     (stream stream-or-string)))
 
-(defun read-csv-row (stream-or-string
-                     &key
-                     (separator *separator*)
-                     (quote *quote*)
-                     (escape *quote-escape*))
+(defun read-csv-row
+    (stream-or-string
+     &key
+     (separator *separator*)
+     (quote *quote*)
+     (escape *quote-escape*)
+     &aux
+     (in-stream (%stream stream-or-string))
+     (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
+     (state :waiting)
+     line llen c skip)
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
-"
+  "
+  ;; giant state machine parser
   (iter
-    (with line)
-    (with llen)
-    (with c)
-    (with skip)
-    (with in-stream = (%stream stream-or-string))
-    (with state = :waiting)
-    (with current = (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
     (for i upfrom 0)
-    (labels ((finish-item ()
+    (setf c (%char-at line i))
+    (labels ((store-char (&optional char)
+               (vector-push-extend char current))
+             (finish-item ()
                (collect (copy-seq (string current)) into items)
                (setf state :waiting)
                (setf (fill-pointer current) 0))
@@ -136,8 +139,6 @@
                      (:collecting (finish-item) (return items))
                      (:collecting-quoted (csv-parse-error c)))
                    ))))
-      (setf c (%char-at line i))
-
       (cond
         ;; if we dont have a line yet read one
         ((null line) (read-line-in))
@@ -147,7 +148,7 @@
          (case state
            ;; in a quoted string that contains new-lines
            (:collecting-quoted
-            (vector-push-extend #\newline current)
+            (store-char #\newline)
             (read-line-in))
            (T (finish-item) (return items))))
 
@@ -159,7 +160,7 @@
         ((%escape-seq? line i escape)
          (case state
            (:collecting-quoted
-            (vector-push-extend quote current)
+            (store-char quote)
             (skip-escape))
            (T (csv-parse-error "Found an escape sequence where it was not expected ~A:~D~%~A"
                                state i line ))))
@@ -168,8 +169,7 @@
         ;; it is quoted data
         ((char= separator c)
          (ecase state
-           (:collecting-quoted
-            (vector-push-extend c current))
+           (:collecting-quoted (store-char c))
            ((:collecting :waiting :waiting-for-next)
             (finish-item))))
 
