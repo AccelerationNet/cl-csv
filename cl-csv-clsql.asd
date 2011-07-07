@@ -7,30 +7,15 @@
 
 (in-package cl-csv.system)
 
-(defsystem :cl-csv
+(defsystem :cl-csv-clsql
   :description "Facilities for reading and writing CSV format files"
   :licence "BSD"
   :version "0.1"
-  :components ((:file "csv"))
-  :depends-on (:iterate :alexandria :cl-interpol))
-
-(defsystem :cl-csv-test
-  :description "Tests for a library providing a cl-csv class, and useful
-     functionality around this"
-  :licence "BSD"
-  :version "0.1"
-  :components ((:module :tests
-			:serial t
-			:components ((:file "csv"))))
-  :depends-on (:cl-csv :lisp-unit))
-
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
-  (asdf:oos 'asdf:load-op :cl-csv-test)
-  (let ((*package* (find-package :cl-csv-test)))
-    (eval (read-from-string "(run-tests)"))))
+  :components ((:file "data-table")
+               (:file "clsql"))
+  :depends-on (:clsql-helper :cl-csv :clsql-data-table))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
-;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without

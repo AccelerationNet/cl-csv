@@ -1,6 +1,18 @@
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
 
+(defmethod format-csv-value ((val clsql-sys:date))
+  (clsql-helper:print-nullable-date val))
+
+(defmethod format-csv-value ((val clsql-sys:wall-time))
+  (clsql-helper:print-nullable-datetime val))
+
+(defun export-query ( sql &key stream)
+  (multiple-value-bind (rows cols)
+      (clsql:query sql :flatp T)
+    (write-csv-row cols :stream stream)
+    (write-csv rows :stream stream)))
+
 (defun import-from-csv (table-name &rest keys
                         &key file (data-table nil data-table-provided)
                         (schema "public") (should-have-serial-id "id")
@@ -14,11 +26,11 @@
     (remf keys :data-table)
 
     (unless data-table-provided
-      (coerce-data-table-of-strings-to-types dt))
+      (data-table:coerce-data-table-of-strings-to-types dt))
     (when (and should-have-serial-id
-               (member should-have-serial-id (column-names dt) :test #'string-equal))
+               (member should-have-serial-id (data-table:column-names dt) :test #'string-equal))
       (error #?"This table already has an id column name `${should-have-serial-id}` Column! Perhaps you wish to turn off should-have-serial-id or assign it a different name?"))
-    (apply #'ensure-table-for-data-table dt table-name keys)
+    (apply #'data-table:ensure-table-for-data-table dt table-name keys)
     (import-data-table
      dt table-name :schema schema
      :excluded-columns excluded-columns)))
