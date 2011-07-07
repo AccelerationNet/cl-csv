@@ -9,7 +9,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (when (find-system 'asdf-system-connections nil)
-    (asdf:operate 'asdf:load-op 'asdf-system-connections)))
+    (asdf:load-system 'asdf-system-connections)))
 
 (defsystem :cl-csv
   :description "Facilities for reading and writing CSV format files"
@@ -33,13 +33,13 @@
   (let ((*package* (find-package :cl-csv-test)))
     (eval (read-from-string "(run-tests)"))))
 
-(asdf:defsystem-connection cl-csv-clsql
-  :description "the part of adwcode base dedicated to postgresql"
-  :requires (:clsql-helper :cl-csv :data-table)
+(asdf:defsystem-connection :cl-csv-clsql
+  :description "A connection to load clsql stuff when we can"
+  :requires (:clsql-helper :cl-csv :clsql-data-table :cl-csv-data-table)
   :components ((:file "clsql")))
 
-(asdf:defsystem-connection cl-csv-data-table
-  :description "the part of adwcode base dedicated to postgresql"
+(asdf:defsystem-connection :cl-csv-data-table
+  :description "A connection to load data-table stuff when possible"
   :requires (:data-table :cl-csv)
   :components ((:file "data-table")))
 
