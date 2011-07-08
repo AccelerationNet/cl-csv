@@ -13,7 +13,7 @@
   :version "0.1"
   :components ((:file "data-table")
                (:file "clsql"))
-  :depends-on (:clsql-helper :cl-csv :clsql-data-table))
+  :depends-on (:clsql-helper :cl-csv :data-table-clsql))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; All rights reserved.
