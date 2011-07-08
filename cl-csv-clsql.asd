@@ -8,7 +8,7 @@
 (in-package cl-csv.system)
 
 (defsystem :cl-csv-clsql
-  :description "Facilities for reading and writing CSV format files"
+  :description "Facilities for reading and writing CSV format files (and importing and exporting csvs from databases)"
   :licence "BSD"
   :version "0.1"
   :components ((:file "data-table")
