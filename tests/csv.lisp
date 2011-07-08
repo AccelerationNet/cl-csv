@@ -3,6 +3,19 @@
 
 (in-package :cl-csv-test)
 
+(defparameter +test-csv-quoted-path+
+  (asdf:system-relative-pathname :cl-csv "tests/test-csv-quoted.csv"))
+(defparameter +test-csv-unquoted-path+
+  (asdf:system-relative-pathname :cl-csv "tests/test-csv-unquoted.csv"))
+(defparameter +test-csv-unquoted-no-trailing-path+
+  (asdf:system-relative-pathname :cl-csv "tests/test-csv-unquoted-no-trailing.csv"))
+
+(defparameter +test-files+
+  (list
+   +test-csv-quoted-path+
+   +test-csv-unquoted-path+
+   +test-csv-unquoted-no-trailing-path+) )
+
 (defparameter *test-csv1-rows*
   '(("first name" "last name" "job \"title\"" "number of hours" "id")
     ("Russ" "Tyndall" "Software Developer's, \"Position\"" "26.2" "1")
@@ -89,3 +102,8 @@ Russ,Tyndall,\"Software Developer's,
 (define-test data-with-whitespace
   (let ((data (read-csv-row "  first    ,     last ,  \" other \"  ")))
     (assert-equal '("first" "last" " other ") data)))
+
+(define-test files
+  (iter (for csv in +test-files+)
+    (for data = (read-csv csv))
+    (assert-equal *test-csv1-rows* data csv)))
