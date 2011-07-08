@@ -7,11 +7,12 @@
 (defmethod format-csv-value ((val clsql-sys:wall-time))
   (clsql-helper:print-nullable-datetime val))
 
-(defun export-query ( sql &key stream)
-  (multiple-value-bind (rows cols)
-      (clsql:query sql :flatp T)
-    (write-csv-row cols :stream stream)
-    (write-csv rows :stream stream)))
+(defun export-query ( sql &key stream path)
+  (with-csv-output-stream (s (or stream path))
+    (multiple-value-bind (rows cols)
+        (clsql:query sql :flatp T)
+      (write-csv-row cols :stream s)
+      (write-csv rows :stream s))))
 
 (defun import-from-csv (table-name &rest keys
                         &key file (data-table nil data-table-provided)

@@ -4,7 +4,11 @@
   (:use :cl :cl-user :iter)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
-   :*quote* :*separator* :*newline* :*quote-escape*))
+   :*quote* :*separator* :*newline* :*quote-escape*
+
+   ;; clsql stuff
+   :export-query :import-from-csv :serial-import-from-csv
+   ))
 
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
@@ -196,13 +200,10 @@
              (T (finish-item) (return items))))
 
           ;; the next characters are an escape sequence, start skipping
-          ((%escape-seq? line i escape)
-           (case state
-             (:collecting-quoted
-              (store-char quote)
-              (skip-escape))
-             (T (csv-parse-error "Found an escape sequence where it was not expected ~A:~D~%~A"
-                                 state i line ))))
+          ((and (eql state :collecting-quoted)
+                (%escape-seq? line i escape))
+           (store-char quote)
+           (skip-escape))
 
           ;; the character is data separator, so gather the word unless
           ;; it is quoted data

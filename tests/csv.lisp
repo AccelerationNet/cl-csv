@@ -10,7 +10,8 @@
     ("John" "Doe" "Anonymous Human" "42.1" "3")
     ("Chuck" "Darwin" "Natural Philosipher" "17.68" "4")
     ("Bill" "Shakespear" "Bard" "12.2" "5")
-    ("James" "Kirk" "Starship Captain" "13.1" "6")))
+    ("James" "Kirk" "Starship Captain" "13.1" "6")
+    ("Bob" "Anon" "" "13.1" "6")))
 
 (defparameter *test-csv1*
 "\"first name\",\"last name\",\"job \"\"title\"\"\",\"number of hours\",\"id\"
@@ -20,6 +21,7 @@
 \"Chuck\",\"Darwin\",\"Natural Philosipher\",\"17.68\",\"4\"
 \"Bill\",\"Shakespear\",\"Bard\",\"12.2\",\"5\"
 \"James\",\"Kirk\",\"Starship Captain\",\"13.1\",\"6\"
+\"Bob\",\"Anon\",\"\",\"13.1\",\"6\"
 ")
 
 (defparameter *test-csv1-v2*
@@ -30,6 +32,7 @@ John,Doe,Anonymous Human,42.1,3
 Chuck,Darwin,Natural Philosipher,17.68,4
 Bill,Shakespear,Bard,12.2,5
 James,Kirk,Starship Captain,13.1,6
+Bob,Anon,,13.1,6
 ")
 
 (defparameter *test-csv-no-trailing-newline*
