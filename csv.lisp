@@ -183,6 +183,7 @@
                    (end-of-file (c)
                      (ecase state
                        (:waiting (error c))
+                       (:waiting-for-next (return items))
                        (:collecting (finish-item) (return items))
                        (:collecting-quoted (csv-parse-error c)))
                      ))))
