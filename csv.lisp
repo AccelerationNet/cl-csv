@@ -1,7 +1,7 @@
 ;; -*- lisp -*-
 
 (cl:defpackage :cl-csv
-  (:use :cl :cl-user :iter)
+  (:use :cl :cl-user :iterate)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*newline* :*quote-escape*
@@ -54,6 +54,7 @@
   (typecase val
     ((or float ratio) (format nil "~F" val))
     (string val)
+    (null "")
     (T (princ-to-string val))))
 
 (defmethod write-csv-value ( val csv-stream
