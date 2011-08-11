@@ -28,10 +28,10 @@ figured why not just release it anyway.
 
 ## Library Integration
 
-* data-table - functions for building data-tables from csv's
-* clsql
-** import-from-csv
-** serial-import-from-csv
+ * data-table - functions for building data-tables from csv's
+ * clsql
+   * import-from-csv
+   * serial-import-from-csv
 
 
 ```
