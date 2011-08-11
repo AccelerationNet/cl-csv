@@ -22,9 +22,9 @@ probably mostly accomplished what I had set out to do. However, I
 already had code that was tested and had an easier license (BSD) so, I 
 figured why not just release it anyway.
 
+### Other Available CSV libs
  * http://members.optusnet.com.au/apicard/csv-parser.lisp
  * http://www.cliki.net/fare-csv
- * 
 
 ## Library Integration
 
