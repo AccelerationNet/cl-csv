@@ -9,6 +9,8 @@
   (asdf:system-relative-pathname :cl-csv "tests/test-csv-unquoted.csv"))
 (defparameter +test-csv-unquoted-no-trailing-path+
   (asdf:system-relative-pathname :cl-csv "tests/test-csv-unquoted-no-trailing.csv"))
+(defparameter +test-multiline+
+  (asdf:system-relative-pathname :cl-csv "tests/test-multiline-data.csv"))
 
 (defparameter +test-files+
   (list
@@ -110,3 +112,11 @@ Russ,Tyndall,\"Software Developer's,
   (iter (for csv in +test-files+)
     (for data = (read-csv csv))
     (assert-equal *test-csv1-rows* data csv)))
+
+(define-test multi-line-file
+  (let ((data (read-csv +test-multiline+)))
+    (assert-equal 2 (length data) data)
+    (assert-equal "test
+of
+multiline" (nth 3 (first data)) ))
+  )
