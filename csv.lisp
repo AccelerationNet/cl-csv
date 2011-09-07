@@ -20,8 +20,7 @@
 (defvar *quote* #\")
 (defvar *separator* #\,)
 (defvar *newline* #?"\r\n")
-(defvar *quote-escape*
-    #?"${ *quote* }${ *quote* }")
+(defvar *quote-escape* #?"${ *quote* }${ *quote* }")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -110,13 +109,13 @@
 
 ;;;; Reading in CSV files
 
-(defun %char-at (s i)
-  (when (< i (length s)) (elt s i)))
-
-(defun %escape-seq? (s i escape)
+(defun %escape-seq? (s i escape llen)
   (iter (for c in-string escape)
     (for offset upfrom 0)
-    (always (eql c (%char-at s (+ i offset))))))
+    (for idx = (+ i offset))
+    (always
+     (and (< idx llen)
+          (char= c (elt s idx))))))
 
 (defun %in-stream (stream-or-string)
   (typecase stream-or-string
@@ -141,7 +140,8 @@
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     line llen c)
+     line llen (c #\nul))
+  (declare (type character c))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -157,9 +157,10 @@
   (with-csv-input-stream (in-stream stream-or-string)
     (iter
       (for i upfrom 0)
-      (setf c (%char-at line i))
+      (when (and line (< i llen))
+        (setf c (elt line i)))
       (labels ((current-last-char ()
-                 (%char-at current (- (fill-pointer current) 1)))
+                 (elt current (- (fill-pointer current) 1)))
                (store-char (&optional char)
                  (vector-push-extend char current))
                (finish-item ()
@@ -181,12 +182,12 @@
                      (setf i -1 ;; we will increment immediately after this
                            line (read-line in-stream)
                            llen (length line))
-                   (end-of-file (c)
+                   (end-of-file (sig)
                      (ecase state
-                       (:waiting (error c))
+                       (:waiting (error sig))
                        (:waiting-for-next (return items))
                        (:collecting (finish-item) (return items))
-                       (:collecting-quoted (csv-parse-error c)))
+                       (:collecting-quoted (csv-parse-error sig)))
                      ))))
         (cond
           ;; if we dont have a line yet read one
@@ -203,7 +204,7 @@
 
           ;; the next characters are an escape sequence, start skipping
           ((and (eql state :collecting-quoted)
-                (%escape-seq? line i escape))
+                (%escape-seq? line i escape llen))
            (store-char quote)
            (skip-escape))
 
