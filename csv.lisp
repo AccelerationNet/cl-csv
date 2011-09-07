@@ -109,13 +109,16 @@
 
 ;;;; Reading in CSV files
 
-(defun %escape-seq? (s i escape llen)
-  (iter (for c in-string escape)
-    (for offset upfrom 0)
-    (for idx = (+ i offset))
-    (always
-     (and (< idx llen)
-          (char= c (elt s idx))))))
+(defun %escape-seq? (s i escape llen elen)
+  (declare (type simple-string s escape) (type fixnum i llen elen))
+  (iter
+    (declare (type fixnum idx eidx) (type character c))
+    (with eidx = 0)
+    (while (< eidx elen))
+    (for c = (char escape eidx))
+    (for idx = (+ i eidx))
+    (incf eidx)
+    (always (and (< idx llen) (char= c (elt s idx))))))
 
 (defun %in-stream (stream-or-string)
   (typecase stream-or-string
@@ -140,8 +143,8 @@
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     line llen (c #\nul))
-  (declare (type character c))
+     line llen (c #\nul)
+     (elen (length escape)))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -204,7 +207,7 @@
 
           ;; the next characters are an escape sequence, start skipping
           ((and (eql state :collecting-quoted)
-                (%escape-seq? line i escape llen))
+                (%escape-seq? line i escape llen elen))
            (store-char quote)
            (skip-escape))
 
