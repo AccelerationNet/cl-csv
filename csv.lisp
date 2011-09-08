@@ -110,7 +110,9 @@
 ;;;; Reading in CSV files
 
 (defun %escape-seq? (s i escape llen elen)
-  (declare (type simple-string s escape) (type fixnum i llen elen))
+  (declare (type simple-string escape)
+           (type string s)
+           (type fixnum i llen elen))
   (iter
     (declare (type fixnum idx eidx) (type character c))
     (with eidx = 0)
@@ -118,7 +120,7 @@
     (for c = (char escape eidx))
     (for idx = (+ i eidx))
     (incf eidx)
-    (always (and (< idx llen) (char= c (elt s idx))))))
+    (always (and (< idx llen) (char= c (char s idx))))))
 
 (defun %in-stream (stream-or-string)
   (typecase stream-or-string
