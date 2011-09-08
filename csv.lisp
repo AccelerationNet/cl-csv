@@ -113,14 +113,14 @@
   (declare (type simple-string escape)
            (type string s)
            (type fixnum i llen elen))
-  (iter
-    (declare (type fixnum idx eidx) (type character c))
-    (with eidx = 0)
-    (while (< eidx elen))
-    (for c = (char escape eidx))
-    (for idx = (+ i eidx))
-    (incf eidx)
-    (always (and (< idx llen) (char= c (char s idx))))))
+  (when (< (+ i elen) llen)
+    (iter
+      (declare (type fixnum eidx))
+      (with eidx = 0)
+      (always (char= (char escape eidx)
+                     (char s (+ i eidx))))
+      (incf eidx)
+      (while (< eidx elen)))))
 
 (defun %in-stream (stream-or-string)
   (typecase stream-or-string
