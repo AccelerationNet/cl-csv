@@ -8,6 +8,7 @@
 
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
+   :get-data-table-from-csv
    ))
 
 (in-package :cl-csv)
