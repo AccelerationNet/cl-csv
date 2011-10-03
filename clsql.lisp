@@ -17,14 +17,20 @@
 (defun import-from-csv (table-name &rest keys
                         &key file (data-table nil data-table-provided)
                         (schema "public") (should-have-serial-id "id")
-                        excluded-columns)
-  "Will make a best effor to create a table matching the csv's schema and then "
+                        excluded-columns row-fn)
+  "Will make a best effor to create a table matching the csv's schema and then
+
+   row-fn (data-row schema table columns)
+          allows you to take actions on a row  (before insert).
+          returning false will prevent the default insert
+  "
   (declare (ignorable schema)) ;; we pass it in keys
   (let* ((cl-interpol:*list-delimiter* ",")
          (*print-pretty* nil)
          (dt (or data-table (get-data-table-from-csv file)))
          (keys (copy-list keys)))
     (remf keys :file)
+    (remf keys :row-fn)
     (remf keys :data-table)
 
     (unless data-table-provided
@@ -33,7 +39,7 @@
                (member should-have-serial-id (data-table:column-names dt) :test #'string-equal))
       (error #?"This table already has an id column name `${should-have-serial-id}` Column! Perhaps you wish to turn off should-have-serial-id or assign it a different name?"))
     (apply #'data-table:ensure-table-for-data-table dt table-name keys)
-    (data-table:import-data-table dt table-name excluded-columns)))
+    (data-table:import-data-table dt table-name excluded-columns :row-fn row-fn)))
 
 (defun serial-import-from-csv (table-name &key file
                                (schema "public") (downcase-columns T)
