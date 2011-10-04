@@ -210,6 +210,7 @@
 
           ;; the next characters are an escape sequence, start skipping
           ((and (eql state :collecting-quoted)
+                escape ;; if this is null there is no escape
                 (%escape-seq? line i escape llen elen))
            (store-char quote)
            (skip-escape))
@@ -224,7 +225,7 @@
 
           ;; the character is a quote (and not an escape) so start an item
           ;; finishing the item is the responsibility of separator/eol
-          ((char= quote c)
+          ((and quote (char= quote c))
            (ecase state
              (:waiting (setf state :collecting-quoted))
              (:collecting-quoted
