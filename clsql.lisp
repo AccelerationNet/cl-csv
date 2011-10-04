@@ -46,9 +46,13 @@
 
 (defun serial-import-from-csv (table-name
                                &key file
+                               (column-names :first-row)
                                (schema "public") (column-transform
                                                   #'data-table::english->postgres)
                                (progress-stream T) (progress-mod 5000)
+                               (data-munger (lambda (row)
+                                              (mapcar #'clsql-helper:format-value-for-database
+                                                      row)))
                                (log (lambda (msg &rest args)
                                       (apply #'format progress-stream msg args)))
                                (on-error 'continue-importing)
@@ -56,6 +60,8 @@
                                (cl-interpol:*list-delimiter* ", "))
   "Will make a best effor to create a table matching the csv's schema and then
 
+   data-munger : a function that changes the the data row to be inserted
+                 (for conversion to other types etc)
    progress-stream: the default log stream to print to
    progress-mod: how often we should report progress (in number of rows)
    log: is a function that accepts msg and args to display status updates to the user
@@ -63,6 +69,10 @@
             allow the error to go up the stack.  the default is to continue with the
             import, skipping the row that caused errors
   "
+  (unless (eql column-names :first-row)
+    (setf columns (data-table::sql-escaped-column-names
+                   column-names
+                   :transform column-transform)))
   (labels ((handled-insert (sql log row)
              (restart-case
                  (handler-bind
@@ -76,11 +86,12 @@
                  :report "Continue Importing the file, skipping this row of data")))
            (row-fn (row &aux data sql)
              (incf cnt)
-             (when (= cnt 1)
+             (when (and (eql column-names :first-row)
+                        (= cnt 1))
                (setf columns
                      (data-table::sql-escaped-column-names row :transform column-transform))
                (return-from row-fn))
-             (setf data (mapcar #'clsql-helper:format-value-for-database row)
+             (setf data (funcall data-munger row)
                    sql #?"INSERT INTO ${schema}.${table-name} (@{ columns }) VALUES ( @{data} )")
              (handled-insert sql log row)
              (when (zerop (mod cnt progress-mod))
