@@ -276,12 +276,10 @@
            (return (coerce sample 'list)))))))
 
 (defun read-csv (stream-or-string
-                 &key
-                 row-fn
-                 map-fn
-                 (separator *separator*)
-                 (quote *quote*)
-                 (escape *quote-escape*))
+                 &key row-fn map-fn sample skip-first-p
+                 ((:separator *separator*) *separator*)
+                 ((:quote *quote*) *quote*)
+                 ((:escape *quote-escape*) *quote-escape*))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 
@@ -290,16 +288,21 @@
 
    map-fn: used for manipulating the data by row during collection if specified
            (funcall map-fn data) is collected instead of data
+   sample: when a positive integer, only take that many samples from the input file
   "
   (with-csv-input-stream (in-stream stream-or-string)
-    (iter
-      (with data)
-      (handler-case
-          (setf data (read-csv-row in-stream :separator separator :escape escape :quote quote))
-        (end-of-file () (finish)))
-      (if row-fn
-          (funcall row-fn data)
-          (collect (if map-fn (funcall map-fn data) data))))))
+    (when skip-first-p (read-line in-stream))
+
+    (if sample
+        (read-csv-sample in-stream sample :row-fn row-fn :map-fn map-fn)
+        (iter
+          (with data)
+          (handler-case
+              (setf data (read-csv-row in-stream))
+            (end-of-file () (finish)))
+          (if row-fn
+              (funcall row-fn data)
+              (collect (if map-fn (funcall map-fn data) data)))))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
