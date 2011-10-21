@@ -18,31 +18,56 @@
       (write-csv rows :stream s))))
 
 (defun import-from-csv (table-name &rest keys
-                        &key file (data-table nil data-table-provided)
-                        (schema "public") (should-have-serial-id "id")
-                        excluded-columns row-fn)
+                        &key file data-table (sample-size 1000)
+                        schema (should-have-serial-id "id")
+                        excluded-columns row-fn
+                        (log-fn #'(lambda (&rest args) (declare (ignore args))))
+                        (log-frequency 1000))
   "Will make a best effor to create a table matching the csv's schema and then
 
    row-fn (data-row schema table columns)
           allows you to take actions on a row  (before insert).
           returning false will prevent the default insert
+
+   log-fn (msg &rest args)
+          function to log progress
+
+   log-frequency : how frequent (measured in rows) to log progress
+
   "
-  (declare (ignorable schema)) ;; we pass it in keys
+;;; TODO: accept column names from params
+;;; TODO: figure out how to process files without columns in the first row
+;;; TODO: figure out how to override type guesses
+  (funcall log-fn "Starting import ~a" table-name)
   (let* ((cl-interpol:*list-delimiter* ",")
          (*print-pretty* nil)
-         (dt (or data-table (get-data-table-from-csv file)))
+         (dt (or data-table (get-data-table-from-csv file t t sample-size)))
          (keys (copy-list keys)))
-    (remf keys :file)
-    (remf keys :row-fn)
-    (remf keys :data-table)
-
-    (unless data-table-provided
-      (data-table:coerce-data-table-of-strings-to-types dt))
+    (dolist (k '(:file :data-table :row-fn :sample-size :log-fn :log-frequency))
+      (remf keys k))
+    (funcall log-fn "CSV scanned for type information")
     (when (and should-have-serial-id
                (member should-have-serial-id (data-table:column-names dt) :test #'string-equal))
       (error #?"This table already has an id column name `${should-have-serial-id}` Column! Perhaps you wish to turn off should-have-serial-id or assign it a different name?"))
     (apply #'data-table:ensure-table-for-data-table dt table-name keys)
-    (data-table:import-data-table dt table-name excluded-columns :row-fn row-fn)))
+    (funcall log-fn "Created table")
+    (let ((row-num 1)
+          (importer (data-table::make-row-importer
+                     dt table-name :schema schema :excluded-columns excluded-columns
+                                   :row-fn row-fn))
+          (start-time (get-universal-time)))
+      (labels
+          ((log-progress (&optional (msg "Processing row"))
+            (let ((elapsed (- (get-universal-time) start-time)))
+              (funcall log-fn "~a ~a. ~ds elapsed (~,2f rows/sec) "
+                       msg row-num elapsed (/ row-num elapsed))))
+           (row-fn (row)
+             (when (zerop (mod row-num log-frequency)) (log-progress))
+             (funcall importer row)
+             (incf row-num)))
+        (funcall log-fn "Starting import")
+        (cl-csv:read-csv file :skip-first-p T :row-fn #'row-fn)
+        (log-progress "Finished, total processed: ")))))
 
 (defun serial-import-from-csv (table-name
                                &key file
