@@ -249,6 +249,32 @@
               (vector-push-extend c current))))
           )))))
 
+(defun read-csv-sample (stream-or-string sample-size
+                        &key row-fn map-fn skip-first-p
+                        ((:separator *separator*) *separator*)
+                        ((:quote *quote*) *quote*)
+                        ((:escape *quote-escape*) *quote-escape*))
+  (with-csv-input-stream (in-stream stream-or-string)
+    (when skip-first-p (read-line in-stream))
+    (iter
+      (with sample = (make-array sample-size :initial-element nil))
+      (for i from 0)
+      (for data = (handler-case
+                      (read-csv-row in-stream)
+                    (end-of-file () nil)))
+      (while data)
+      (if (< i sample-size)
+          (setf (aref sample i)
+                (if map-fn (funcall map-fn data) data))
+          (let ((r (random i)))
+            (when (< r sample-size)
+              (setf (aref sample r)
+                    (if map-fn (funcall map-fn data) data)))))
+      (finally
+       (if row-fn
+           (iter (for row in-vector sample) (funcall row-fn row))
+           (return (coerce sample 'list)))))))
+
 (defun read-csv (stream-or-string
                  &key
                  row-fn
