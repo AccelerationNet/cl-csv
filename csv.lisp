@@ -21,6 +21,7 @@
 (defvar *quote* #\")
 (defvar *separator* #\,)
 (defvar *newline* #?"\r\n")
+(defvar *always-quote* nil)
 (defvar *quote-escape* #?"${ *quote* }${ *quote* }")
 
 (defun white-space? (c)
@@ -57,17 +58,27 @@
     (null "")
     (T (princ-to-string val))))
 
-(defmethod write-csv-value ( val csv-stream
-                             &key (formatter #'format-csv-value)
-                             (quote *quote*)
-                             (escape *quote-escape*))
-  (write-char quote csv-stream)
+(defmethod write-csv-value (val csv-stream
+                            &key (formatter #'format-csv-value)
+                            (quote *quote*)
+                            (separator *separator*)
+                            (escape *quote-escape*)
+                            (always-quote *always-quote*)
+                            &aux
+                            (should-quote (or always-quote
+                                              (not
+                                               (iter (for char in-sequence (funcall formatter val))
+                                                 (never (or (char= quote char)
+                                                            (char= separator char))))))))
+  (when should-quote
+    (write-char quote csv-stream))
   (iter
     (for char in-sequence (funcall formatter val))
     (if (char= quote char)
         (write-sequence escape csv-stream)
         (write-char char csv-stream)))
-  (write-char quote csv-stream))
+  (when should-quote
+    (write-char quote csv-stream)))
 
 (defmacro with-csv-output-stream ((name inp) &body body)
   (alexandria:with-unique-names (opened?)
@@ -80,31 +91,32 @@
 (defun write-csv-row (items
                       &key
                       stream
-                      (quote *quote*)
-                      (escape *quote-escape*)
-                      (separator *separator*)
-                      (newline *newline*))
+                      ((:separator *separator*) *separator*)
+                      ((:quote *quote*) *quote*)
+                      ((:escape *quote-escape*) *quote-escape*)
+                      ((:newline *newline*) *newline*)
+                      ((:always-quote *always-quote*) *always-quote*))
   "Write the list ITEMS to stream."
   (with-csv-output-stream (csv-stream stream)
     (iter (for item in items)
       (unless (first-iteration-p)
-        (write-char separator csv-stream))
-      (write-csv-value item csv-stream :escape escape :quote quote))
-    (write-sequence newline csv-stream)
+        (write-char *separator* csv-stream))
+      (write-csv-value item csv-stream))
+    (write-sequence *newline* csv-stream)
     (unless stream
       (get-output-stream-string csv-stream))))
 
 (defun write-csv (rows-of-items
                   &key
                   stream
-                  (quote *quote*)
-                  (escape *quote-escape*)
-                  (separator *separator*)
-                  (newline *newline*))
+                  ((:separator *separator*) *separator*)
+                  ((:quote *quote*) *quote*)
+                  ((:escape *quote-escape*) *quote-escape*)
+                  ((:newline *newline*) *newline*)
+                  ((:always-quote *always-quote*) *always-quote*))
   (with-csv-output-stream (csv-stream stream)
     (iter (for row in rows-of-items)
-      (write-csv-row row :stream csv-stream :quote quote :separator separator
-                         :escape escape :newline newline))
+      (write-csv-row row :stream csv-stream))
     (unless stream
       (get-output-stream-string csv-stream))))
 
@@ -140,14 +152,14 @@
 (defun read-csv-row
     (stream-or-string
      &key
-     (separator *separator*)
-     (quote *quote*)
-     (escape *quote-escape*)
+     ((:separator *separator*) *separator*)
+     ((:quote *quote*) *quote*)
+     ((:escape *quote-escape*) *quote-escape*)
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
      line llen (c #\nul)
-     (elen (length escape)))
+     (elen (length *quote-escape*)))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -181,7 +193,7 @@
                  (setf (fill-pointer current) 0))
                (skip-escape ()
                  ;; we just read the first escape char
-                 (incf i (- (length escape) 1)))
+                 (incf i (- (length *quote-escape*) 1)))
                (read-line-in ()
                  (handler-case
                      ;; reset index, line and len for the next line of data
@@ -210,14 +222,14 @@
 
           ;; the next characters are an escape sequence, start skipping
           ((and (eql state :collecting-quoted)
-                escape ;; if this is null there is no escape
-                (%escape-seq? line i escape llen elen))
-           (store-char quote)
+                *quote-escape* ;; if this is null there is no escape
+                (%escape-seq? line i *quote-escape* llen elen))
+           (store-char *quote*)
            (skip-escape))
 
           ;; the character is data separator, so gather the word unless
           ;; it is quoted data
-          ((char= separator c)
+          ((char= *separator* c)
            (ecase state
              (:collecting-quoted (store-char c))
              ((:collecting :waiting :waiting-for-next)
@@ -225,7 +237,7 @@
 
           ;; the character is a quote (and not an escape) so start an item
           ;; finishing the item is the responsibility of separator/eol
-          ((and quote (char= quote c))
+          ((and *quote* (char= *quote* c))
            (ecase state
              (:waiting (setf state :collecting-quoted))
              (:collecting-quoted

@@ -2,6 +2,7 @@
   (:use :cl :cl-user :cl-csv :lisp-unit :iter))
 
 (in-package :cl-csv-test)
+(cl-interpol:enable-interpol-syntax)
 
 (defparameter +test-csv-quoted-path+
   (asdf:system-relative-pathname :cl-csv "tests/test-csv-quoted.csv"))
@@ -67,7 +68,7 @@ Russ,Tyndall,\"Software Developer's,
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
 
 (define-test writing-1
-  (assert-equal *test-csv1* (write-csv *test-csv1-rows*)))
+  (assert-equal *test-csv1* (write-csv *test-csv1-rows* :always-quote T)))
 
 (define-test parsing-errors
   (assert-error 'csv-parse-error
@@ -84,7 +85,7 @@ Russ,Tyndall,\"Software Developer's,
 
 (define-test no-trailing-parse
   (let* ((data (read-csv *test-csv-no-trailing-newline*))
-         (str (write-csv data))
+         (str (write-csv data :always-quote T))
          (data2 (read-csv str)))
     (assert-equal 2 (length data))
     (assert-equal 5 (length (first data)))
@@ -93,7 +94,7 @@ Russ,Tyndall,\"Software Developer's,
 
 (define-test data-with-newlines
   (let* ((data (read-csv *test-csv-data-with-newlines*))
-         (str (write-csv data))
+         (str (write-csv data :always-quote T))
          (data2 (read-csv str)))
     (assert-equal 2 (length data))
     (assert-equal 5 (length (first data)))
@@ -120,3 +121,10 @@ Russ,Tyndall,\"Software Developer's,
 of
 multiline" (nth 3 (first data)) ))
   )
+
+(define-test always-quoting-and-newline
+  (let* ((row '("Russ" "Tyndall" "Software Developer's, \"Position\"" "26.2" "1" ","))
+         (res (write-csv-row row :always-quote nil :newline #?"\n")))
+    (assert-equal "Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\"
+"
+        res)))
