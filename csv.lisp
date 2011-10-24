@@ -66,10 +66,9 @@
                             (always-quote *always-quote*)
                             &aux
                             (should-quote (or always-quote
-                                              (not
-                                               (iter (for char in-sequence (funcall formatter val))
-                                                 (never (or (char= quote char)
-                                                            (char= separator char))))))))
+                                              (iter (for char in-sequence (funcall formatter val))
+                                                (thereis (or (char= quote char)
+                                                             (char= separator char)))))))
   (when should-quote
     (write-char quote csv-stream))
   (iter
