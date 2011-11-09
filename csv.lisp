@@ -65,14 +65,15 @@
                             (escape *quote-escape*)
                             (always-quote *always-quote*)
                             &aux
+                            (formatted-value (funcall formatter val))
                             (should-quote (or always-quote
-                                              (iter (for char in-sequence (funcall formatter val))
+                                              (iter (for char in-sequence formatted-value)
                                                 (thereis (or (char= quote char)
                                                              (char= separator char)))))))
   (when should-quote
     (write-char quote csv-stream))
   (iter
-    (for char in-sequence (funcall formatter val))
+    (for char in-sequence formatted-value)
     (if (char= quote char)
         (write-sequence escape csv-stream)
         (write-char char csv-stream)))
