@@ -42,7 +42,7 @@
 ;;;; Writing csvs
 
 (defun %out-stream (stream-or-string)
-  (typecase stream-or-string
+  (etypecase stream-or-string
     (null (make-string-output-stream))
     (stream stream-or-string)
     (pathname
