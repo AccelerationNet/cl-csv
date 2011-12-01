@@ -9,7 +9,7 @@
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
    :get-data-table-from-csv
-   ))
+   #:do-csv))
 
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
@@ -315,6 +315,14 @@
           (if row-fn
               (funcall row-fn data)
               (collect (if map-fn (funcall map-fn data) data)))))))
+
+(defmacro do-csv ((row-var stream-or-pathname
+                   &rest read-csv-keys)
+                  &body body)
+  `(read-csv ,stream-or-pathname ,@read-csv-keys
+    :row-fn #'(lambda (,row-var) ,@body)
+    )
+  )
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
