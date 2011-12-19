@@ -221,7 +221,8 @@
              (T (finish-item) (return items))))
 
           ;; the next characters are an escape sequence, start skipping
-          ((and (eql state :collecting-quoted)
+          ((and (or (eql state :collecting-quoted)
+                    (eql state :collecting))
                 *quote-escape* ;; if this is null there is no escape
                 (%escape-seq? line i *quote-escape* llen elen))
            (store-char *quote*)
