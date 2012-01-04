@@ -9,7 +9,8 @@
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
    :get-data-table-from-csv
-   #:do-csv))
+   #:do-csv
+   #:*default-external-format*))
 
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
@@ -135,11 +136,15 @@
       (incf eidx)
       (while (< eidx elen)))))
 
+(defvar *default-external-format* :default
+  "the external format used for opening files")
+
 (defun %in-stream (stream-or-string)
   (typecase stream-or-string
     (string (make-string-input-stream stream-or-string))
     (stream stream-or-string)
-    (pathname (values (open stream-or-string) T))))
+    (pathname (values (open stream-or-string :external-format *default-external-format*)
+                      T))))
 
 (defmacro with-csv-input-stream ((name inp) &body body)
   (alexandria:with-unique-names (opened?)
