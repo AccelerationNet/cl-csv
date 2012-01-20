@@ -9,12 +9,17 @@
 **Arguments and Values**
 
 *row-var* -- a variable that is passed into _body_
+
 *stream-or-pathname* -- a stream or a pathname to read the CSV data from
+
 *read-csv-keys* -- keys for the _read-csv_ function
+
 *body* -- body of the macro
 
 *Function* **read-csv**
+
 **Syntax:**
+
 **read-csv** (stream-or-string
                  &key row-fn map-fn sample skip-first-p
                  ((:separator *separator*) *separator*)
@@ -22,14 +27,23 @@
                  ((:escape *quote-escape*) *quote-escape*))
 				 
 **Arguments and Values**
+
 *stream-or-string*
+
 *row-fn*
+
 *map-fn*
+
 *sample*
+
 *skip-first-p*
+
 *separator*
+
 *quote*
+
 *escape*
+
 
 
 *Function* csv-parse-error
