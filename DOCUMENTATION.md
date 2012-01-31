@@ -12,7 +12,7 @@
 
 *stream-or-pathname* -- a stream or a pathname to read the CSV data from
 
-*read-csv-keys* -- keys for the _read-csv_ function
+*read-csv-keys* -- keys and values passed to the _read-csv_ function
 
 *body* -- body of the macro
 
@@ -28,25 +28,29 @@
 				 
 **Arguments and Values**
 
-*stream-or-string*
+*stream-or-string* -- a stream or a pathname to read the CSV from
 
-*row-fn*
+*row-fn* -- passing this parameter will cause this read to be streaming and results
+           will be discarded after the row-fn is called with data
 
-*map-fn*
+*map-fn* -- used for manipulating the data by row during collection if specified
+           (funcall map-fn data) is collected instead of data
 
-*sample*
+*sample* -- when a positive integer, only take that many samples from the input file
 
-*skip-first-p*
+*skip-first-p* -- when true, skips the first line in the csv
 
-*separator*
+*separator* -- separator between data cells
 
-*quote*
+*quote* -- quote for text
 
-*escape*
+*escape* -- escape character
 
 
 
 *Function* csv-parse-error
+
+
 *Function* format-csv-value
 *Function* write-csv-value
 *Function* write-csv-row
