@@ -38,13 +38,16 @@
 (defparameter +test-big-file+
   (asdf:system-relative-pathname :cl-csv "tests/long-test.csv"))
 
-(defun ensure-big-file (&optional (n 120000))
+(defun ensure-big-file  (&optional (n 12000)
+                           (m 25))
   (time-and-log-around (test-log "Ensure large file test")
     (with-open-file (s +test-big-file+ :direction :output :if-exists :supersede )
-      (iter (for i from 0 to n)
-        (write-csv-row '("Russ" "Tyndall" "Software Developer's, \"Position\""
-                         "26.2" "1" "further columns" "even" "more" "data")
-                       :stream s)))))
+      (iter (for i from 0 below n)
+        (write-csv-row
+         (iter (for j from 0 below m)
+           (appending '("Russ" "Tyndall" "Software Developer's, \"Position\""
+                        "26.2" "1" "further columns" "even" "more" "data")))
+         :stream s)))))
 
 (defun count-big-file-csv-rows (&aux (cnt 0))
   (time-and-log-around (test-log "read large file test")
@@ -72,6 +75,20 @@
         )))
 
   (values cnt cnt2))
+
+(defun read-by-line-and-char ( &optional (n 3))
+  (iter (for i from 0 below n)
+    (time-and-log-around (test-log "read large file by lines")
+      (read-csv +test-big-file+
+                :read-fn #'cl-csv::read-csv-row
+                :row-fn #'(lambda (row) (declare (ignore row)))))
+  
+    (time-and-log-around (test-log "read large file by char")
+      (read-csv +test-big-file+
+                :read-fn #'cl-csv::read-csv-row-by-char
+                :row-fn #'(lambda (row) (declare (ignore row))))))
+  
+  (values))
 
 (defun collect-big-file-csv-rows ()
   (time-and-log-around (test-log "read large file test")

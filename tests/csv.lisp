@@ -63,7 +63,7 @@ Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1")
 Russ,Tyndall,\"Software Developer's,
  \"\"Position\"\"\",26.2,1")
 
-(defparameter *test-csv-data-waiting-next-error*
+(defparameter *test-csv-escape-on-eol*
   "\"Which of the following is an appropriate calming technique or statement:
 A. \"\"I can help you.\"\"
 B. \"\"Shut up.\"\"
@@ -129,12 +129,15 @@ of
 multiline" (nth 3 (first data)) ))
   )
 
+(defparameter +test-row+
+  '("Russ" "Tyndall" "Software Developer's, \"Position\"" "26.2" "1" "," "Iñtërnâtiônàlizætiøn"))
+
 (define-test always-quoting-and-newline
-  (let* ((row '("Russ" "Tyndall" "Software Developer's, \"Position\"" "26.2" "1" ","))
+  (let* ((row +test-row+)
          (res (write-csv-row row :always-quote nil :newline #?"\n")))
-    (assert-equal "Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\"
+    (assert-equal "Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\",Iñtërnâtiônàlizætiøn
 "
         res)))
 
-(define-test cause-error
-  (let ((data (read-csv *test-csv-data-waiting-next-error*)))))
+(define-test escape-is-last-char-on-line
+  (read-csv *test-csv-escape-on-eol*))
