@@ -16,7 +16,7 @@
 
 
 #|
----- long lines many of them
+---- long lines
 CL-CSV-TEST> (read-by-line-and-char)
 09:38:27 BEGIN read large file by lines
 09:38:30   END read large file by lines
