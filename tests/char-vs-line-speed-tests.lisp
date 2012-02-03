@@ -152,3 +152,76 @@ Evaluation took:
    174,741,184 bytes consed
 
 |#
+
+;;;;;;;;;;;;;;;;;;;;;;;
+
+#|
+CL-CSV-TEST> (read-by-line-and-char 1)
+
+16:01:28 BEGIN read large file by buffer
+16:01:31   END read large file by buffer
+Evaluation took:
+  3.773 seconds of real time
+   3.604226 seconds of total run time (3.320208 user, 0.284018 system)
+   [ Run times consist of 0.068 seconds GC time, and 3.537 seconds non-GC time. ]
+   95.52% CPU
+   9,408,281,077 processor cycles
+   243,824,288 bytes consed
+   
+
+16:01:31 BEGIN read large file by char
+16:01:33   END read large file by char
+Evaluation took:
+  2.022 seconds of real time
+   1.992125 seconds of total run time (1.948122 user, 0.044003 system)
+   [ Run times consist of 0.040 seconds GC time, and 1.953 seconds non-GC time. ]
+   98.52% CPU
+   5,043,384,818 processor cycles
+   174,740,432 bytes consed
+   
+
+16:01:33 BEGIN read large file by lines
+16:01:35   END read large file by lines
+Evaluation took:
+  1.753 seconds of real time
+   1.724108 seconds of total run time (1.692106 user, 0.032002 system)
+   [ Run times consist of 0.040 seconds GC time, and 1.685 seconds non-GC time. ]
+   98.35% CPU
+   4,372,122,180 processor cycles
+   225,731,120 bytes consed
+   
+
+; No value
+CL-CSV-TEST> (read-by-line-and-char 1)
+16:06:13 BEGIN read large file by buffer
+16:06:17   END read large file by buffer
+Evaluation took:
+  3.694 seconds of real time
+   3.628226 seconds of total run time (3.356209 user, 0.272017 system)
+   [ Run times consist of 0.052 seconds GC time, and 3.577 seconds non-GC time. ]
+   98.21% CPU
+   9,210,856,673 processor cycles
+   243,867,056 bytes consed
+   
+
+16:06:17 BEGIN read large file by char
+16:06:19   END read large file by char
+Evaluation took:
+  1.997 seconds of real time
+   1.972124 seconds of total run time (1.940122 user, 0.032002 system)
+   [ Run times consist of 0.032 seconds GC time, and 1.941 seconds non-GC time. ]
+   98.75% CPU
+   4,980,562,598 processor cycles
+   174,709,040 bytes consed
+   
+
+16:06:19 BEGIN read large file by lines
+16:06:21   END read large file by lines
+Evaluation took:
+  1.773 seconds of real time
+   1.760110 seconds of total run time (1.728108 user, 0.032002 system)
+   [ Run times consist of 0.032 seconds GC time, and 1.729 seconds non-GC time. ]
+   99.27% CPU
+   4,421,971,875 processor cycles
+   225,726,800 bytes consed
+   |#

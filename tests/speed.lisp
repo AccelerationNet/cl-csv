@@ -78,14 +78,19 @@
 
 (defun read-by-line-and-char ( &optional (n 3))
   (iter (for i from 0 below n)
-    (time-and-log-around (test-log "read large file by lines")
+    (time-and-log-around (test-log "read large file by buffer")
       (read-csv +test-big-file+
-                :read-fn #'cl-csv::read-csv-row
+                :read-fn #'cl-csv::read-csv-row-by-buffer
                 :row-fn #'(lambda (row) (declare (ignore row)))))
   
     (time-and-log-around (test-log "read large file by char")
       (read-csv +test-big-file+
                 :read-fn #'cl-csv::read-csv-row-by-char
+                :row-fn #'(lambda (row) (declare (ignore row)))))
+    
+    (time-and-log-around (test-log "read large file by lines")
+      (read-csv +test-big-file+
+                :read-fn #'cl-csv::read-csv-row
                 :row-fn #'(lambda (row) (declare (ignore row))))))
   
   (values))
