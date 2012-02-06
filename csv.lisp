@@ -127,7 +127,7 @@
   (declare (type simple-string escape)
            (type string s)
            (type fixnum i llen elen))
-  (when (< (+ i elen) llen)
+  (when (<= (+ i elen) llen)
     (iter
       (declare (type fixnum eidx))
       (with eidx = 0)
