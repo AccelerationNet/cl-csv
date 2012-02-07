@@ -141,3 +141,13 @@ multiline" (nth 3 (first data)) ))
 
 (define-test escape-is-last-char-on-line
   (read-csv *test-csv-escape-on-eol*))
+
+(define-test different-escapes
+  (let ((escapes '("~" "\\\"" "\"\"" "\\\"\\\""))
+        (lrow0 '("Escaped \"Quotes\"" "\"in\"" "h\"er\"e")))
+    (iter (for escape in escapes)
+      (for srow0 = (write-csv-row lrow0 :escape escape))
+      (for lrow1 = (read-csv-row srow0 :escape escape))
+      (for srow1 = (write-csv-row lrow1 :escape escape))
+      (assert-equal srow0 srow1)
+      (assert-equal lrow0 lrow1))))

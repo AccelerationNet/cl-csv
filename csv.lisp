@@ -154,7 +154,7 @@
           (when (and ,name ,opened?)
             (close ,name)))))))
 
-(defun read-csv-row
+(defun read-csv-row-by-line
     (stream-or-string
      &key
      ((:separator *separator*) *separator*)
