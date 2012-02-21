@@ -278,12 +278,13 @@
        (state :waiting)
        (c #\nul) (next #\nul)
        (elen (length *quote-escape*))
+       (elen-1 (- elen 1))
        (elast (char *quote-escape* (- elen 1)))
+       partial-escape-match?
        escape-match?)
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
-  
   ;; giant state machine parser
   ;; states:
   ;;    waiting: we are between inputs, or have not started reading yet
@@ -296,20 +297,23 @@
   (with-csv-input-stream (in-stream stream-or-string)
     (iter
       (for i upfrom 0)
-      (labels ((read-in ()
+      (labels ((partial-escaped (p)
+                 (cond ((null p)
+                        (and (char= c (char *quote-escape* 0)) 1))
+                       ((char= c (char *quote-escape* p))
+                        (+ p 1))
+                       (t (iter top
+                            (decf p)
+                            (while (>= p 0))
+                            (iter (for j from p below 0)
+                              (in top (always ))
+                              (finally (return-from top p)))
+                            (finally (if p))))))
+               (read-in ()
                  (setf c (read-char in-stream nil #\nul)
-                       next (peek-char nil in-stream nil #\nul))
-                 (when (>= i elen)
-		   (iter
-		     (initially
-		      (setf escape-match? (char= c elast))
-		      (unless escape-match? (finish)))
-		     (for j from (- elen 2) downto 0)
-		     (setf escape-match?
-			   (char= (char current (- (fill-pointer current) j))
-				  (char *quote-escape* j)))
-		     (unless escape-match? (finish))
-		     )))
+                       next (peek-char nil in-stream nil #\nul)
+                       partial-escape-match? (partial-escaped p)
+                       escape-match? (eql partial-escape-match? elen-1)))
                (escape-char-match? ()
                  (and (or (eql state :collecting-quoted)
                           (eql state :collecting)
@@ -380,7 +384,8 @@
              (:waiting (setf state :collecting-quoted))
              ((:collecting-quoted :waiting-for-next)
               ;; if we end up trying to read
-              (setf state :waiting-for-next)
+              (unless partial-escape-match?
+                (setf state :waiting-for-next))
               )
              (:collecting
                (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A~%~A"
