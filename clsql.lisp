@@ -38,6 +38,7 @@
 ;;; TODO: accept column names from params
 ;;; TODO: figure out how to process files without columns in the first row
 ;;; TODO: figure out how to override type guesses
+;;; TODO: check if the table already exists and skip the guessing
   (funcall log-fn "Starting import ~a" table-name)
   (let* ((cl-interpol:*list-delimiter* ",")
          (*print-pretty* nil)
