@@ -63,6 +63,13 @@ Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1")
 Russ,Tyndall,\"Software Developer's,
  \"\"Position\"\"\",26.2,1")
 
+(defparameter *test-csv-data-waiting-next-error*
+  "\"Which of the following is an appropriate calming technique or statement:
+A. \"\"I can help you.\"\"
+B. \"\"Shut up.\"\"
+C. \"\"If you don't calm down I'm not sending anyone.\"\"
+D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
+
 (define-test parsing-1
   (assert-equal *test-csv1-rows* (read-csv *test-csv1*))
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
@@ -128,3 +135,6 @@ multiline" (nth 3 (first data)) ))
     (assert-equal "Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\"
 "
         res)))
+
+(define-test cause-error
+  (let ((data (read-csv *test-csv-data-waiting-next-error*)))))
