@@ -8,7 +8,8 @@
 
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
-   :get-data-table-from-csv
+
+   :get-data-table-from-csv :data-table-to-csv
    #:do-csv
    #:*default-external-format*))
 

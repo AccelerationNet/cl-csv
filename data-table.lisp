@@ -12,3 +12,7 @@
       (when munge-types
         (data-table:coerce-data-table-of-strings-to-types dt))
       dt)))
+
+(defun data-table-to-csv (dt &optional stream)
+  (write-csv (list* (data-table:column-names dt) (data-table:rows dt))
+             :stream stream))
