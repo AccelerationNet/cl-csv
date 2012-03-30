@@ -43,15 +43,6 @@
 
 ;;;; Writing csvs
 
-(defun %out-stream (stream-or-string)
-  (etypecase stream-or-string
-    (null (make-string-output-stream))
-    (stream stream-or-string)
-    (pathname
-     (values
-      (open stream-or-string :direction :output :if-exists :supersede)
-      T))))
-
 (defmethod format-csv-value (val)
   "Print values in ways that are most cross compatible with the csv format"
   (typecase val
@@ -90,6 +81,16 @@
           (when (and ,name ,opened?)
             (close ,name)))))))
 
+(defun %out-stream (stream-or-string)
+  "creates a stream from the given thing, trying to DWIM"
+  (etypecase stream-or-string
+    (null (make-string-output-stream))
+    (stream stream-or-string)
+    (pathname
+     (values
+      (open stream-or-string :direction :output :if-exists :supersede)
+      T))))
+
 (defun write-csv-row (items
                       &key
                       stream
@@ -116,6 +117,10 @@
                   ((:escape *quote-escape*) *quote-escape*)
                   ((:newline *newline*) *newline*)
                   ((:always-quote *always-quote*) *always-quote*))
+  "writes a csv to the given stream. Stream can be:
+ * nil - writes the rows to a string and returns it
+ * an open stream
+ * a pathname (overwrites if the file exists)"
   (with-csv-output-stream (csv-stream stream)
     (iter (for row in rows-of-items)
       (write-csv-row row :stream csv-stream))
