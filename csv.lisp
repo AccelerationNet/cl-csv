@@ -19,11 +19,11 @@
 
 ;;;; Generating CSV files from lisp data
 
-(defvar *quote* #\")
-(defvar *separator* #\,)
-(defvar *newline* #?"\r\n")
-(defvar *always-quote* nil)
-(defvar *quote-escape* #?"${ *quote* }${ *quote* }")
+(defvar *quote* #\" "Default quote character")
+(defvar *separator* #\, "Default separator character")
+(defvar *newline* #?"\r\n" "Default newline string")
+(defvar *always-quote* nil "Default setting for always quoting")
+(defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -71,6 +71,19 @@
                                               (iter (for char in-sequence formatted-value)
                                                 (thereis (or (char= quote char)
                                                              (char= separator char)))))))
+  "Writes val to csv-stream in a formatted fashion.
+
+Keywords
+
+formatter: used to format val. Defaults to format-csv-value.
+
+quote: quoting character. Defaults to *quote*
+
+escape: escaping character. Defaults to *quote-escape*
+
+newline: newline character. Defaults to *newline
+
+always-quote: Defaults to *always-quote*"
   (when should-quote
     (write-char quote csv-stream))
   (iter
@@ -97,7 +110,22 @@
                       ((:escape *quote-escape*) *quote-escape*)
                       ((:newline *newline*) *newline*)
                       ((:always-quote *always-quote*) *always-quote*))
-  "Write the list ITEMS to stream."
+"
+Writes a list items to stream
+
+rows-of-items: iterable
+
+Keywords:
+
+stream: stream to write to. Default: nil.
+
+quote: quoting character. Defaults to *quote*
+
+escape: escaping character. Defaults to *quote-escape*
+
+newline: newline character. Defaults to *newline
+
+always-quote: Defaults to *always-quote*"
   (with-csv-output-stream (csv-stream stream)
     (iter (for item in items)
       (unless (first-iteration-p)
@@ -115,6 +143,21 @@
                   ((:escape *quote-escape*) *quote-escape*)
                   ((:newline *newline*) *newline*)
                   ((:always-quote *always-quote*) *always-quote*))
+  "Writes a CSV
+
+rows-of-items: iterable
+
+Keywords:
+
+stream: stream to write to. Default: nil.
+
+quote: quoting character. Defaults to *quote*
+
+escape: escaping character. Defaults to *quote-escape*
+
+newline: newline character. Defaults to *newline
+
+always-quote: Defaults to *always-quote*"
   (with-csv-output-stream (csv-stream stream)
     (iter (for row in rows-of-items)
       (write-csv-row row :stream csv-stream))
@@ -301,13 +344,25 @@
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 
-   row-fn: passing this parameter will cause this read to be streaming and results
-           will be discarded after the row-fn is called with data
+row-fn: passing this parameter will cause this read to be streaming
+           and results will be discarded after the row-fn is called
+           with data
 
-   map-fn: used for manipulating the data by row during collection if specified
-           (funcall map-fn data) is collected instead of data
-   sample: when a positive integer, only take that many samples from the input file
-  "
+map-fn: used for manipulating the data by row during collection if
+specified; (funcall map-fn data) is collected instead of data
+
+sample: when a positive integer, only take that many samples from the input file
+
+skip-first-p: when true, skips the first line in the csv
+
+
+Keywords:
+
+separator: character separating between data cells. Defaults to *separator*
+
+quote: quoting character for text strings. Defaults to *quote*
+
+escape: escape character. Defaults to *quote-escape*"
   (with-csv-input-stream (in-stream stream-or-string)
     (when skip-first-p (read-line in-stream))
 
@@ -325,6 +380,13 @@
 (defmacro do-csv ((row-var stream-or-pathname
                    &rest read-csv-keys)
                   &body body)
+"row-var: a variable that is passed into _body_
+
+stream-or-pathname: a stream or a pathname to read the CSV data from
+
+read-csv-keys: keys and values passed to the _read-csv_ function
+
+body: body of the macro"
   `(read-csv ,stream-or-pathname ,@read-csv-keys
     :row-fn #'(lambda (,row-var) ,@body)
     )
