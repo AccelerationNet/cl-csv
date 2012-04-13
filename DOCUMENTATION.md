@@ -72,8 +72,8 @@ _[Function]_
 **csv-parse-error** *msg `&rest` args* =\> \*result*
 - - -
 _[Macro]_
-**do-csv** *(row-var stream-or-pathname `&rest` read-csv-keys)
-declaration\* statement\** =\> \*result*
+**do-csv** *((row-var stream-or-pathname `&rest` read-csv-keys)
+`&body` body)* =\> \*result*
 
 
 row-var: a variable that is passed into _body_
@@ -206,6 +206,6 @@ always-quote: Defaults to \*always-quote*
 # Acknowledgements
 
 This documentation was prepared with
-_[DOCUMENTATION-TEMPLATE](http://weitz.de/documentation-template/),
+[DOCUMENTATION-TEMPLATE](http://weitz.de/documentation-template/),
 then passed through
-_[pandoc](http://johnmacfarlane.net/pandoc/index.html), *then* hand-edited.
+[pandoc](http://johnmacfarlane.net/pandoc/index.html), *then* hand-edited.
