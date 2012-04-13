@@ -69,7 +69,7 @@ _[Condition type]_
 **csv-parse-error**
 - - -
 _[Function]_
-**csv-parse-error** *msg `&rest` args* =\> \*result*
+**csv-parse-error** ( *msg `&rest` args* ) =\> \*result*
 - - -
 _[Macro]_
 **do-csv** *((row-var stream-or-pathname `&rest` read-csv-keys)
@@ -86,19 +86,19 @@ body: body of the macro
 
 - - -
 _[Generic function]_
-**format-csv-value** *val* =\> \*result*
+**format-csv-value** ( *val* ) =\> \*result*
 
 - - -
 _[Method]_
-**format-csv-value** *val* =\> \*result*
+**format-csv-value** ( *val* ) =\> \*result*
 
  Print values in ways that are most cross compatible with the csv
 format
 - - -
 _[Function]_
-**read-csv** *stream-or-string `&key` row-fn map-fn sample
-skip-first-p (separator \*separator*) (quote \*quote*) (escape
-\*quote-escape*)* =\> \*result*
+**read-csv** ( *stream-or-string* `&key` *row-fn* *map-fn* *sample*
+*skip-first-p* ( separator \*separator\* ) (quote \*quote\*) (escape
+\*quote-escape\*))* =\> \*result*
 
 Read in a CSV by data-row (which due to quoted newlines may be more
 than one line from the stream)
@@ -125,9 +125,9 @@ escape: escape character. Defaults to \*quote-escape*
 
 - - -
 _[Function]_
-**read-csv-row** *stream-or-string `&key` (separator \*separator\*)
-(quote \*quote\*) (escape \*quote-escape\*) `&aux` current state line
-llen c elen* =\> \*result*
+**read-csv-row** ( *stream-or-string* `&key` (separator \*separator\*)
+(quote \*quote\*) (escape \*quote-escape\*) `&aux` *current state line
+llen c elen*) =\> \*result\*
 
 
 Read in a CSV by _data-row_ (which due to quoted newlines may be more
@@ -135,9 +135,9 @@ than one line from the stream)
 
 - - -
 _[Function]_
-**write-csv** *rows-of-items `&key` stream (separator \*separator\*)
+**write-csv** (*rows-of-items* `&key` *stream* (separator \*separator\*)
 (quote \*quote\*) (escape \*quote-escape\*) (newline \*newline\*)
-(always-quote \*always-quote\*)* =\> \*result*
+(always-quote \*always-quote\*) ) =\> \*result\*
 
 Writes a CSV
 
@@ -157,9 +157,9 @@ always-quote: Defaults to \*always-quote\*
 
 - - -
 _[Function]_
-**write-csv-row** *items `&key` stream (separator \*separator*)
-(quote \*quote*) (escape \*quote-escape*) (newline \*newline*)
-(always-quote \*always-quote*)* =\> \*result*
+**write-csv-row** ( *items* `&key` *stream* (separator \*separator\*)
+(quote \*quote\*) (escape \*quote-escape\*) (newline \*newline\*)
+(always-quote \*always-quote\*) ) =\> \*result*
 
 
 Writes a list items to stream
@@ -170,23 +170,23 @@ _Keywords:_
 
 stream: stream to write to. Default: nil.
 
-quote: quoting character. Defaults to \*quote*
+quote: quoting character. Defaults to \*quote\*
 
-escape: escaping character. Defaults to \*quote-escape*
+escape: escaping character. Defaults to \*quote-escape\*
 
-newline: newline character. Defaults to \*newline*
+newline: newline character. Defaults to \*newline\*
 
-always-quote: Defaults to \*always-quote*
+always-quote: Defaults to \*always-quote\*
 
 - - -
 _[Generic function]_
-**write-csv-value** *val csv-stream `&key` formatter quote separator
-escape always-quote* =\> \*result*
+**write-csv-value** ( *val csv-stream* `&key` *formatter quote separator
+escape always-quote* ) =\> \*result*
 
 - - -
 _[Method]_
-**write-csv-value** *val csv-stream `&key` formatter quote separator
-escape always-quote* =\> \*result*
+**write-csv-value** ( *val csv-stream* `&key` *formatter quote separator
+escape always-quote* ) =\> \*result*
 
 
 Writes val to csv-stream in a formatted fashion.
