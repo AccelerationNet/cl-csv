@@ -1,5 +1,5 @@
 	CL-CSV - a Common Lisp library for csv reading and writing
-----------------------------------------------------------
+=====
 
 # Abstract
 
@@ -32,46 +32,46 @@ The code license is found
 
 
 
-#Download
+# Download
 
 CL-CSV together with this documentation can be downloaded from
 [https://github.com/AccelerationNet/cl-csv](https://github.com/AccelerationNet/cl-csv).
 
-#The CL-CSV dictionary
+# The CL-CSV dictionary
 
-[Special variable]
+_[Special variable]_
 **\*default-external-format***
 
 The external format used for opening files
 
-[Special variable]
+_[Special variable]_
 **\*newline***
 
  Default newline string
 
-[Special variable]
+_[Special variable]_
 **\*quote***
 
  Default quote character
 
-[Special variable]
+_[Special variable]_
 **\*quote-escape***
 
  Default setting for escaping quotes
 
-[Special variable]
+_[Special variable]_
 **\*separator***
 
  Default separator character
 
-
-[Condition type]
+- - -
+_[Condition type]_
 **csv-parse-error**
-
-[Function]
+- - -
+_[Function]_
 **csv-parse-error** *msg `&rest` args* =\> \*result*
-
-[Macro]\
+- - -
+_[Macro]_
 **do-csv** *(row-var stream-or-pathname `&rest` read-csv-keys)
 declaration\* statement\** =\> \*result*
 
@@ -84,16 +84,18 @@ read-csv-keys: keys and values passed to the _read-csv_ function
 
 body: body of the macro
 
-[Generic function]
+- - -
+_[Generic function]_
 **format-csv-value** *val* =\> \*result*
 
-[Method]
+- - -
+_[Method]_
 **format-csv-value** *val* =\> \*result*
 
  Print values in ways that are most cross compatible with the csv
 format
-
-[Function]
+- - -
+_[Function]_
 **read-csv** *stream-or-string `&key` row-fn map-fn sample
 skip-first-p (separator \*separator*) (quote \*quote*) (escape
 \*quote-escape*)* =\> \*result*
@@ -112,7 +114,7 @@ the input file
 
 skip-first-p: when true, skips the first line in the csv
 
-Keywords:
+_Keywords:_
 
 separator: character separating between data cells. Defaults to
 \*separator*
@@ -121,8 +123,8 @@ quote: quoting character for text strings. Defaults to \*quote*
 
 escape: escape character. Defaults to \*quote-escape*
 
-
-[Function]
+- - -
+_[Function]_
 **read-csv-row** *stream-or-string `&key` (separator \*separator\*)
 (quote \*quote\*) (escape \*quote-escape\*) `&aux` current state line
 llen c elen* =\> \*result*
@@ -131,8 +133,8 @@ llen c elen* =\> \*result*
 Read in a CSV by _data-row_ (which due to quoted newlines may be more
 than one line from the stream)
 
-
-[Function]
+- - -
+_[Function]_
 **write-csv** *rows-of-items `&key` stream (separator \*separator\*)
 (quote \*quote\*) (escape \*quote-escape\*) (newline \*newline\*)
 (always-quote \*always-quote\*)* =\> \*result*
@@ -153,7 +155,8 @@ newline: newline character. Defaults to \*newline\*
 
 always-quote: Defaults to \*always-quote\*
 
-[Function]
+- - -
+_[Function]_
 **write-csv-row** *items `&key` stream (separator \*separator*)
 (quote \*quote*) (escape \*quote-escape*) (newline \*newline*)
 (always-quote \*always-quote*)* =\> \*result*
@@ -175,12 +178,13 @@ newline: newline character. Defaults to \*newline*
 
 always-quote: Defaults to \*always-quote*
 
-[Generic function]
+- - -
+_[Generic function]_
 **write-csv-value** *val csv-stream `&key` formatter quote separator
 escape always-quote* =\> \*result*
 
-
-[Method]
+- - -
+_[Method]_
 **write-csv-value** *val csv-stream `&key` formatter quote separator
 escape always-quote* =\> \*result*
 
@@ -199,9 +203,9 @@ newline: newline character. Defaults to \*newline*
 
 always-quote: Defaults to \*always-quote*
 
-### Acknowledgements
+# Acknowledgements
 
 This documentation was prepared with
-[DOCUMENTATION-TEMPLATE](http://weitz.de/documentation-template/),
+_[DOCUMENTATION-TEMPLATE](http://weitz.de/documentation-template/),
 then passed through
-[pandoc](http://johnmacfarlane.net/pandoc/index.html), *then* hand-edited.
+_[pandoc](http://johnmacfarlane.net/pandoc/index.html), *then* hand-edited.
