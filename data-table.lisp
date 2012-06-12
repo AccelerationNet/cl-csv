@@ -3,7 +3,7 @@
   (:use :cl)
   (:use :cl-csv)
   (:export #:get-data-table-from-csv
-           #:get-data-table-from-list))
+           #:get-data-table-from-csv-list))
 
 (cl:in-package #:cl-csv-data-table)
 
