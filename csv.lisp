@@ -209,7 +209,7 @@ always-quote: Defaults to *always-quote*"
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     line llen (c #\nul)
+     line llen (c #\null)
      (elen (length *quote-escape*)))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
