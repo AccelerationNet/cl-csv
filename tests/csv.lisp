@@ -129,12 +129,27 @@ of
 multiline" (nth 3 (first data)) ))
   )
 
-(define-test always-quoting-and-newline
+(define-test dont-always-quote-and-newline
   (let* ((row '("Russ" "Tyndall" "Software Developer's, \"Position\"" "26.2" "1" ","))
          (res (write-csv-row row :always-quote nil :newline #?"\n")))
-    (assert-equal "Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\"
-"
+    (assert-equal #?"Russ,Tyndall,\"Software Developer's, \"\"Position\"\"\",26.2,1,\",\"\n"
+        res)))
+
+(define-test dont-always-quote-and-newline-2
+  (let* ((row '("," #?"a\r\nnewline\r\ntest\r\n"))
+         (res (write-csv-row row :always-quote nil :newline #?"\n")))
+    (assert-equal #?"\",\",\"a\r\nnewline\r\ntest\r\n\"\n"
         res)))
 
 (define-test cause-error
-  (let ((data (read-csv *test-csv-data-waiting-next-error*)))))
+  (let ((data (read-csv *test-csv-data-waiting-next-error*)))
+    (assert-true data)))
+
+(define-test chars-in-test
+  (assert-true (cl-csv::chars-in "a" "abcdef"))
+  (assert-false (cl-csv::chars-in "qu" "abcdef"))
+  (assert-true (cl-csv::chars-in "qu" "asdfqasdf"))
+  (assert-true (cl-csv::chars-in "qu" "asdfuasdf"))
+  (assert-true (cl-csv::chars-in (list "q" "u") "asdfuasdf"))
+  (assert-true (cl-csv::chars-in (list #\q #\u) "asdfuasdf"))
+  (assert-true (cl-csv::chars-in (list "q" #\u) "asdfqasdf")))

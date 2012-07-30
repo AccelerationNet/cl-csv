@@ -54,6 +54,20 @@
     (null "")
     (T (princ-to-string val))))
 
+(defun %char-in (c to-check)
+  (typecase to-check
+    (character (char= c to-check))
+    (string
+     (iter (for c2 in-string to-check)
+       (thereis (char= c c2))))))
+
+(defun chars-in (chars-to-check value-to-look-through)
+  "returns true if any of the chars-to-check is found in the value-to-look-through"
+  (iter (for c1 in-string value-to-look-through)
+    (thereis
+     (iter (for to-check in (alexandria:ensure-list chars-to-check))
+       (thereis (%char-in c1 to-check))))))
+
 (defmethod write-csv-value (val csv-stream
                             &key (formatter #'format-csv-value)
                             (quote *quote*)
@@ -63,9 +77,8 @@
                             &aux
                             (formatted-value (funcall formatter val))
                             (should-quote (or always-quote
-                                              (iter (for char in-sequence formatted-value)
-                                                (thereis (or (char= quote char)
-                                                             (char= separator char)))))))
+                                           (chars-in (list quote separator *newline*)
+                                            formatted-value))))
   "Writes val to csv-stream in a formatted fashion.
 
 Keywords
