@@ -61,7 +61,9 @@
           ((log-progress (&optional (msg "Processing row"))
             (let ((elapsed (- (get-universal-time) start-time)))
               (funcall log-fn "~a ~a. ~ds elapsed (~,2f rows/sec) "
-                       msg row-num elapsed (/ row-num elapsed))))
+                       msg row-num elapsed
+                       (if (zerop elapsed) "Inf"
+                           (/ row-num elapsed)))))
            (row-fn (row)
              (when (zerop (mod row-num log-frequency)) (log-progress))
              (funcall importer row)
