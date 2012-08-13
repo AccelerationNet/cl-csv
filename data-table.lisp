@@ -9,8 +9,9 @@
         (setf (data-table:column-names dt) (map-fn (cl-csv::read-csv-row in-stream))))
       (setf (data-table:rows dt)
             (read-csv in-stream :map-fn #'map-fn :sample sample))
-      (when munge-types
-        (data-table:coerce-data-table-of-strings-to-types dt))
+      (if munge-types
+        (data-table:coerce-data-table-of-strings-to-types dt)
+        (data-table::ensure-column-data-types dt))
       dt)))
 
 
