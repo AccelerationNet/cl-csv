@@ -75,7 +75,7 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
 
 (define-test writing-1
-  (assert-equal *test-csv1* (write-csv *test-csv1-rows* :always-quote T)))
+  (assert-equal *test-csv1* (write-csv *test-csv1-rows* :always-quote t)))
 
 (define-test parsing-errors
   (assert-error 'csv-parse-error
@@ -92,7 +92,7 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
 
 (define-test no-trailing-parse
   (let* ((data (read-csv *test-csv-no-trailing-newline*))
-         (str (write-csv data :always-quote T))
+         (str (write-csv data :always-quote t))
          (data2 (read-csv str)))
     (assert-equal 2 (length data))
     (assert-equal 5 (length (first data)))
@@ -101,7 +101,7 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
 
 (define-test data-with-newlines
   (let* ((data (read-csv *test-csv-data-with-newlines*))
-         (str (write-csv data :always-quote T))
+         (str (write-csv data :always-quote t))
          (data2 (read-csv str)))
     (assert-equal 2 (length data))
     (assert-equal 5 (length (first data)))

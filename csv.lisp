@@ -52,7 +52,7 @@
     ((or float ratio) (format nil "~F" val))
     (string val)
     (null "")
-    (T (princ-to-string val))))
+    (t (princ-to-string val))))
 
 (defun %char-in (c to-check)
   (typecase to-check
@@ -118,7 +118,7 @@ always-quote: Defaults to *always-quote*"
     (pathname
      (values
       (open stream-or-string :direction :output :if-exists :supersede)
-      T))))
+      t))))
 
 (defun write-csv-row (items
                       &key
@@ -282,7 +282,7 @@ always-quote: Defaults to *always-quote*"
              (:collecting-quoted
               (store-char #\newline)
               (read-line-in))
-             (T (finish-item) (return items))))
+             (t (finish-item) (return items))))
 
           ;; the next characters are an escape sequence, start skipping
           ((and (or (eql state :collecting-quoted)
@@ -311,7 +311,7 @@ always-quote: Defaults to *always-quote*"
              (:collecting
                (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
                                 i line))))
-          (T
+          (t
            (ecase state
              (:waiting
               (unless (white-space? c)

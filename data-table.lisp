@@ -1,6 +1,6 @@
 (cl:in-package :cl-csv)
 
-(defun get-data-table-from-csv (file &optional (has-column-names t) (munge-types T) sample
+(defun get-data-table-from-csv (file &optional (has-column-names t) (munge-types t) sample
                                 &aux (dt (make-instance 'data-table:data-table)))
   "Gets a data-table object representing the CSV"
   (cl-csv::with-csv-input-stream (in-stream file)
@@ -21,7 +21,7 @@
              :stream stream))
 
 (defun get-data-table-from-csv-list
-    (list &optional (has-column-names t) (munge-types T) sample
+    (list &optional (has-column-names t) (munge-types t) sample
           &aux (dt (make-instance 'data-table:data-table)))
   "Create a data-table from the parsed csv as lisp lists"
   (flet ((map-fn (row) (mapcar #'data-table::trim-and-nullify row)))

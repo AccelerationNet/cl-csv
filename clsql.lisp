@@ -13,7 +13,7 @@
 (defun export-query ( sql &key stream path)
   (with-csv-output-stream (s (or stream path))
     (multiple-value-bind (rows cols)
-        (clsql:query sql :flatp T)
+        (clsql:query sql :flatp t)
       (write-csv-row cols :stream s)
       (write-csv rows :stream s))))
 
@@ -69,7 +69,7 @@
              (funcall importer row)
              (incf row-num)))
         (funcall log-fn "Starting import")
-        (cl-csv:read-csv file :skip-first-p T :row-fn #'row-fn)
+        (cl-csv:read-csv file :skip-first-p t :row-fn #'row-fn)
         (log-progress "Finished, total processed: ")))))
 
 (defun serial-import-from-csv (table-name
@@ -77,7 +77,7 @@
                                (column-names :first-row)
                                (schema "public") (column-transform
                                                   #'data-table::english->postgres)
-                               (progress-stream T) (progress-mod 5000)
+                               (progress-stream t) (progress-mod 5000)
                                (data-munger (lambda (row)
                                               (mapcar #'clsql-helper:format-value-for-database
                                                       row)))

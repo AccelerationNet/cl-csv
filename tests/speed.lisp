@@ -12,7 +12,7 @@
   (apply #'format *standard-output* message args)
   (format *standard-output* "~%"))
 
-(EVAL-WHEN (:COMPILE-TOPLEVEL :LOAD-TOPLEVEL :EXECUTE)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro log-around ((log-name message &rest args) &body body)
     "Logs the beginning and end of a body.  ARGS are evaluated twice"
     (let  ((gmessage (gensym "GMESSAGE-")))
