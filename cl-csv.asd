@@ -27,7 +27,7 @@
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
   (asdf:oos 'asdf:load-op :cl-csv-test)
   (let ((*package* (find-package :cl-csv-test)))
-    (eval (read-from-string "(run-tests)"))))
+    (eval (read-from-string "(run-tests :all)"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
