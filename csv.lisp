@@ -329,6 +329,51 @@ always-quote: Defaults to *always-quote*"
               (vector-push-extend c current))))
           )))))
 
+(iterate:defmacro-clause (FOR var IN-CSV input
+                              &optional SKIPPING-HEADER skip-first-p
+                              SEPARATOR separator
+                              QUOTE quote
+                              ESCAPED-QUOTE escaped-quote)
+  "IN-CSV driver for iterate"
+  (alexandria:with-unique-names (stream opened? skip)
+    `(progn
+      (with ,skip = ,skip-first-p)
+      ;; can't bind values in a `with`, so listify and destructure
+      (with (,stream ,opened?) = (multiple-value-list
+                                  (%in-stream ,input)))
+      (with *separator* = (or ,separator *separator*))
+      (with *quote* = (or ,quote *quote*))
+      (with *quote-escape* = (or ,escaped-quote *quote-escape*))
+      (finally-protected
+       (when (and ,stream ,opened?)
+         (close ,stream)))
+      (handler-case
+          (progn
+            ;; optionally skip the first row
+            (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
+            (for ,var = (read-csv-row ,stream)))
+        (end-of-file () (finish))))))
+
+(iterate:defmacro-clause (SAMPLING expr &optional INTO var SIZE size)
+  "resevoir sample the input"
+  (let ((sample (or var iterate::*result-var*)))
+    (alexandria:with-unique-names (i sample-size sigil)
+      `(progn
+        (with ,sample-size = (or ,size 100))
+        (with ,sample = (make-array ,sample-size :initial-element ',sigil))
+        (for ,i from 0)
+        (if (< ,i ,sample-size)
+            (setf (aref ,sample ,i) ,expr)
+            (let ((r (random ,i)))
+              (when (< r ,sample-size)
+                (setf (aref ,sample r) ,expr))))
+        (finally
+         ;; convert our sample to a list
+         (setf ,sample
+          (iter (for row in-vector ,sample)
+            (unless (eq row ',sigil)
+              (collect row)))))))))
+
 (defun read-csv-sample (stream-or-string sample-size
                         &key row-fn map-fn skip-first-p
                         ((:separator *separator*) *separator*)
@@ -410,32 +455,6 @@ body: body of the macro"
     :row-fn #'(lambda (,row-var) ,@body)
     )
   )
-
-
-(iterate:defmacro-clause (FOR var IN-CSV input
-                              &optional SKIPPING-HEADER skip-first-p
-                              SEPARATOR separator
-                              QUOTE quote
-                              ESCAPED-QUOTE escaped-quote)
-  "IN-CSV driver for iterate"
-  (alexandria:with-unique-names (stream opened? skip)
-    `(progn
-      (with ,skip = ,skip-first-p)
-      ;; can't bind values in a `with`, so listify and destructure
-      (with (,stream ,opened?) = (multiple-value-list
-                                  (%in-stream ,input)))
-      (with *separator* = (or ,separator *separator*))
-      (with *quote* = (or ,quote *quote*))
-      (with *quote-escape* = (or ,escaped-quote *quote-escape*))
-      (finally-protected
-       (when (and ,stream ,opened?)
-         (close ,stream)))
-      (handler-case
-          (progn
-            ;; optionally skip the first row
-            (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
-            (for ,var = (read-csv-row ,stream)))
-        (end-of-file () (finish))))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
