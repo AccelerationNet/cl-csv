@@ -28,16 +28,51 @@ figured why not just release it anyway.
 
 ## Library Integration
 
- * data-table - functions for building data-tables from csv's
- * clsql
-   * import-from-csv
-   * serial-import-from-csv
+ * [data-table](https://github.com/AccelerationNet/data-table) - functions for building data-tables from csv's, must `(asdf:load-system :cl-csv-data-table)`
+ * [clsql](http://clsql.b9.com/) must `(asdf:load-system :cl-csv-clsql)`
+    * import-from-csv
+    * serial-import-from-csv
+ * [iterate](http://common-lisp.net/project/iterate) - provides an
+   `in-csv` driver clause for iterating over a CSV
+
+## Examples
+
+```lisp
+;; read a file into a list of lists
+(cl-csv:read-csv #P"file.csv")
+=> (("1" "2" "3") ("4" "5" "6"))
+
+;; read a file that's tab delimited
+(cl-csv:read-csv #P"file.tab" :separator #\Tab)
+
+;; read a file and return a list of objects created from each row
+(cl-csv:read-csv #P"file.csv"
+                 :map-fn #'(lambda (row)
+                             (make-instance 'object
+                                            :foo (nth 0 row)
+                                            :baz (nth 2 row))))
+;; read csv from a string (streams also supported)
+(cl-csv:read-csv "1,2,3
+4,5,6")
+=> (("1" "2" "3") ("4" "5" "6"))
+
+;; loop over a CSV for effect
+(let ((sum 0))
+  (cl-csv:do-csv (row #P"file.csv")
+    (incf sum (parse-integer (nth 0 row))))
+  sum)
+  
+  
+;; loop over a CSV using iterate
+(iter (for (foo bar baz) in-csv #P"file.csv")
+  (collect (make-instance 'object :foo foo :baz baz)))
+```
 
 ## Authors
- * [Acceleration.net](http://www.acceleration.net/) [Donate](http://www.acceleration.net/programming/donate-to-acceleration-net/)
-  * [Russ Tyndall](http://russ.unwashedmeme.com/blog)
-  * [Nathan Bird](http://the.unwashedmeme.com/blog)
-  * [Ryan Davis](http://ryepup.unwashedmeme.com/blog)
+ * [Acceleration.net](http://www.acceleration.net/)
+    * [Russ Tyndall](http://russ.unwashedmeme.com/blog)
+    * [Nathan Bird](http://the.unwashedmeme.com/blog)
+    * [Ryan Davis](http://ryepup.unwashedmeme.com/blog)
 
 ```
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
