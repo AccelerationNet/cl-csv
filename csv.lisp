@@ -6,6 +6,9 @@
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*newline* :*quote-escape*
 
+   ;; iterate driver
+   #:in-csv
+
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
 
