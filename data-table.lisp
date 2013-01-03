@@ -3,16 +3,18 @@
 (defun get-data-table-from-csv (file &optional (has-column-names t) (munge-types t) sample
                                 &aux (dt (make-instance 'data-table:data-table)))
   "Gets a data-table object representing the CSV"
-  (cl-csv::with-csv-input-stream (in-stream file)
-    (flet ((map-fn (row) (mapcar #'data-table::trim-and-nullify row)))
-      (when has-column-names
-        (setf (data-table:column-names dt) (map-fn (cl-csv::read-csv-row in-stream))))
-      (setf (data-table:rows dt)
-            (read-csv in-stream :map-fn #'map-fn :sample sample))
-      (if munge-types
-        (data-table:coerce-data-table-of-strings-to-types dt)
-        (data-table::ensure-column-data-types dt))
-      dt)))
+  (iter (for row in-csv file)
+    (for data = (mapcar #'data-table::trim-and-nullify row))
+    (if (and has-column-names (first-iteration-p))
+        (setf (data-table:column-names dt) data)
+        (if sample
+            (sampling data into rows size sample)
+            (collect data into rows)))
+    (finally (setf (data-table:rows dt) rows)))
+  (if munge-types
+      (data-table:coerce-data-table-of-strings-to-types dt)
+      (data-table::ensure-column-data-types dt))
+  dt)
 
 
 (defun data-table-to-csv (dt &optional stream)

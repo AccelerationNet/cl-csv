@@ -22,7 +22,9 @@
                         schema (should-have-serial-id "id")
                         excluded-columns row-fn
                         (log-fn #'(lambda (&rest args) (declare (ignore args))))
-                        (log-frequency 1000))
+                        (log-frequency 1000)
+                        &aux (cl-interpol:*list-delimiter* ",")
+                        (*print-pretty* nil))
   "Will make a best effor to create a table matching the csv's schema and then
 
    row-fn (data-row schema table columns)
@@ -40,10 +42,8 @@
 ;;; TODO: figure out how to override type guesses
 ;;; TODO: check if the table already exists and skip the guessing
   (funcall log-fn "Starting import ~a" table-name)
-  (let* ((cl-interpol:*list-delimiter* ",")
-         (*print-pretty* nil)
-         (dt (or data-table (get-data-table-from-csv file t t sample-size)))
-         (keys (copy-list keys)))
+  (let ((dt (or data-table (get-data-table-from-csv file t t sample-size)))
+        (keys (copy-list keys)))
     (dolist (k '(:file :data-table :row-fn :sample-size :log-fn :log-frequency))
       (remf keys k))
     (funcall log-fn "CSV scanned for type information")
@@ -51,26 +51,23 @@
                (member should-have-serial-id (data-table:column-names dt) :test #'string-equal))
       (error #?"This table already has an id column name `${should-have-serial-id}` Column! Perhaps you wish to turn off should-have-serial-id or assign it a different name?"))
     (apply #'data-table:ensure-table-for-data-table dt table-name keys)
-    (funcall log-fn "Created table")
-    (let ((row-num 1)
-          (importer (data-table::make-row-importer
-                     dt table-name :schema schema :excluded-columns excluded-columns
-                                   :row-fn row-fn))
-          (start-time (get-universal-time)))
-      (labels
-          ((log-progress (&optional (msg "Processing row"))
-            (let ((elapsed (- (get-universal-time) start-time)))
-              (funcall log-fn "~a ~a. ~ds elapsed (~,2f rows/sec) "
-                       msg row-num elapsed
-                       (if (zerop elapsed) "Inf"
-                           (/ row-num elapsed)))))
-           (row-fn (row)
-             (when (zerop (mod row-num log-frequency)) (log-progress))
-             (funcall importer row)
-             (incf row-num)))
-        (funcall log-fn "Starting import")
-        (cl-csv:read-csv file :skip-first-p t :row-fn #'row-fn)
-        (log-progress "Finished, total processed: ")))))
+    (funcall log-fn "Created table, starting import")
+    (let ((start-time (get-universal-time)))
+      (flet ((log-progress (row-num &optional (msg "Processing row"))
+               (let ((elapsed (- (get-universal-time) start-time)))
+                 (funcall log-fn "~a ~a. ~ds elapsed (~,2f rows/sec) "
+                          msg row-num elapsed
+                          (if (zerop elapsed) "Inf"
+                              (/ row-num elapsed))))))
+        (iter
+          (with importer = (data-table::make-row-importer
+                            dt table-name :schema schema :excluded-columns excluded-columns
+                            :row-fn row-fn))
+          (for row in-csv file SKIPPING-HEADER T)
+          (for row-num from 1)
+          (funcall importer row)
+          (when (zerop (mod row-num log-frequency)) (log-progress row-num))
+          (finally (log-progress "Finished, total processed: " row-num)))))))
 
 (defun serial-import-from-csv (table-name
                                &key file
@@ -84,8 +81,7 @@
                                (log (lambda (msg &rest args)
                                       (apply #'format progress-stream msg args)))
                                (on-error 'continue-importing)
-                               &aux (cnt 0) columns
-                               (cl-interpol:*list-delimiter* ", "))
+                               &aux columns (cl-interpol:*list-delimiter* ", "))
   "Will make a best effor to create a table matching the csv's schema and then
 
    data-munger : a function that changes the the data row to be inserted
@@ -101,27 +97,21 @@
     (setf columns (data-table::sql-escaped-column-names
                    column-names
                    :transform column-transform)))
-  (labels ((handled-insert (sql log row)
-             (restart-case
-                 (handler-bind
-                     ((error (lambda (c)
-                               (funcall log "Error importing ROW ~D of file: ~S~%~S~%~A~%~S"
-                                        cnt file row c c)
-                               (when on-error
-                                 (when (find-restart on-error) (invoke-restart on-error))))))
-                   (exec sql))
-               (continue-importing ()
-                 :report "Continue Importing the file, skipping this row of data")))
-           (row-fn (row &aux data sql)
-             (incf cnt)
-             (when (and (eql column-names :first-row)
-                        (= cnt 1))
-               (setf columns
-                     (data-table::sql-escaped-column-names row :transform column-transform))
-               (return-from row-fn))
-             (setf data (funcall data-munger row)
-                   sql #?"INSERT INTO ${schema}.${table-name} (@{ columns }) VALUES ( @{data} )")
-             (handled-insert sql log row)
-             (when (zerop (mod cnt progress-mod))
-               (funcall log "Imported ~D rows~%" cnt ))))
-    (read-csv file :row-fn #'row-fn)))
+  (iter
+    (for row in-csv file)
+    (for cnt from 0)
+    (if (and (eql column-names :first-row) (first-iteration-p))
+        (setf columns (data-table::sql-escaped-column-names row :transform column-transform))
+        (restart-case
+            (handler-bind
+                ((error (lambda (c)
+                          (funcall log "Error importing ROW ~D of file: ~S~%~S~%~A~%~S"
+                                   cnt file row c c)
+                          (when on-error
+                            (when (find-restart on-error) (invoke-restart on-error))))))
+              (exec #?"INSERT INTO ${schema}.${table-name} (@{ columns })
+VALUES ( @{ (funcall data-munger row) } )")
+              (when (zerop (mod cnt progress-mod))
+                (funcall log "Imported ~D rows~%" cnt )))
+          (continue-importing ()
+            :report "Continue Importing the file, skipping this row of data")))))
