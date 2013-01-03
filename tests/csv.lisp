@@ -153,3 +153,33 @@ multiline" (nth 3 (first data)) ))
   (assert-true (cl-csv::chars-in (list "q" "u") "asdfuasdf"))
   (assert-true (cl-csv::chars-in (list #\q #\u) "asdfuasdf"))
   (assert-true (cl-csv::chars-in (list "q" #\u) "asdfqasdf")))
+
+(define-test iterate-clauses
+  (iter
+    (for (a b c) in-csv "1,2,3
+4,5,6")
+    (assert-equal (if (first-time-p) "1" "4") a)
+    (assert-equal (if (first-time-p) "2" "5") b)
+    (assert-equal (if (first-time-p) "3" "6") c)
+    (for i from 0)
+    (finally (assert-equal 1 i)))
+
+  ;; test SKIPPING-HEADER option
+  (iter
+    (for (a b c) in-csv "1,2,3
+4,5,6" SKIPPING-HEADER T)
+    (assert-equal  "4" a)
+    (assert-equal  "5" b)
+    (assert-equal  "6" c)
+    (for i from 0)
+    (finally (assert-equal 0 i)))
+
+  ;; test SEPARATOR
+  (iter
+    (for (a b c) in-csv "1|2|3
+4|5|6" SKIPPING-HEADER T SEPARATOR #\|)
+    (assert-equal  "4" a)
+    (assert-equal  "5" b)
+    (assert-equal  "6" c)
+    (for i from 0)
+    (finally (assert-equal 0 i))))

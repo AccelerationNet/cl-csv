@@ -408,6 +408,32 @@ body: body of the macro"
     )
   )
 
+
+(iterate:defmacro-clause (FOR var IN-CSV input
+                              &optional SKIPPING-HEADER skip-first-p
+                              SEPARATOR separator
+                              QUOTE quote
+                              ESCAPED-QUOTE escaped-quote)
+  "IN-CSV driver for iterate"
+  (alexandria:with-unique-names (stream opened? skip)
+    `(progn
+      (with ,skip = ,skip-first-p)
+      ;; can't bind values in a `with`, so listify and destructure
+      (with (,stream ,opened?) = (multiple-value-list
+                                  (%in-stream ,input)))
+      (with *separator* = (or ,separator *separator*))
+      (with *quote* = (or ,quote *quote*))
+      (with *quote-escape* = (or ,escaped-quote *quote-escape*))
+      (finally-protected
+       (when (and ,stream ,opened?)
+         (close ,stream)))
+      (handler-case
+          (progn
+            ;; optionally skip the first row
+            (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
+            (for ,var = (read-csv-row ,stream)))
+        (end-of-file () (finish))))))
+
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved.
