@@ -354,22 +354,24 @@ always-quote: Defaults to *always-quote*"
 (iterate:defmacro-clause (SAMPLING expr &optional INTO var SIZE size)
   "resevoir sample the input"
   (let ((sample (or var iterate::*result-var*)))
-    (alexandria:with-unique-names (i sample-size sigil)
+    (alexandria:with-unique-names (i sample-size sigil buffer)
       `(progn
         (with ,sample-size = (or ,size 100))
-        (with ,sample = (make-array ,sample-size :initial-element ',sigil))
-        (for ,i from 0)
+        (with ,buffer = (make-array ,sample-size :initial-element ',sigil))
+        (with ,i = 0)
         (if (< ,i ,sample-size)
-            (setf (aref ,sample ,i) ,expr)
+            (setf (aref ,buffer ,i) ,expr)
             (let ((r (random ,i)))
               (when (< r ,sample-size)
-                (setf (aref ,sample r) ,expr))))
+                (setf (aref ,buffer r) ,expr))))
+        (incf ,i)
         (finally
-         ;; convert our sample to a list
-         (setf ,sample
-          (iter (for row in-vector ,sample)
-            (unless (eq row ',sigil)
-              (collect row)))))))))
+         ;; convert our sample to a list, but only if we actually took the sample
+         (when (plusp ,i)
+           (setf ,sample
+                 (iter (for row in-vector ,buffer)
+                   (unless (eq row ',sigil)
+                     (collect row))))))))))
 
 (defun read-csv-sample (stream-or-string sample-size
                         &key row-fn map-fn skip-first-p

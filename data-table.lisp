@@ -3,7 +3,8 @@
 (defun get-data-table-from-csv (file &optional (has-column-names t) (munge-types t) sample
                                 &aux (dt (make-instance 'data-table:data-table)))
   "Gets a data-table object representing the CSV"
-  (iter (for row in-csv file)
+  (iter
+    (for row in-csv file)
     (for data = (mapcar #'data-table::trim-and-nullify row))
     (if (and has-column-names (first-iteration-p))
         (setf (data-table:column-names dt) data)
