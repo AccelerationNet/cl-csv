@@ -67,7 +67,7 @@
           (for row-num from 1)
           (funcall importer row)
           (when (zerop (mod row-num log-frequency)) (log-progress row-num))
-          (finally (log-progress "Finished, total processed: " row-num)))))))
+          (finally (log-progress row-num "Finished, total processed: ")))))))
 
 (defun serial-import-from-csv (table-name
                                &key file
