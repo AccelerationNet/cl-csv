@@ -145,7 +145,7 @@ newline: newline character. Defaults to *newline
 
 always-quote: Defaults to *always-quote*"
   (with-csv-output-stream (csv-stream stream)
-    (iter (for item in items)
+    (iter (for item in (alexandria:ensure-list items))
       (unless (first-iteration-p)
         (write-char *separator* csv-stream))
       (write-csv-value item csv-stream))
