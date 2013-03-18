@@ -46,13 +46,14 @@
 
 ;;;; Writing csvs
 
-(defmethod format-csv-value (val)
-  "Print values in ways that are most cross compatible with the csv format"
-  (typecase val
-    ((or float ratio) (format nil "~F" val))
-    (string val)
-    (null "")
-    (t (princ-to-string val))))
+(defgeneric format-csv-value (val)
+  (:documentation "Print values in ways that are most cross compatible with the csv format")
+  (:method (val)
+    (typecase val
+      ((or float ratio) (format nil "~F" val))
+      (string val)
+      (null "")
+      (t (princ-to-string val)))))
 
 (defun %char-in (c to-check)
   (typecase to-check
@@ -68,18 +69,9 @@
      (iter (for to-check in (alexandria:ensure-list chars-to-check))
        (thereis (%char-in c1 to-check))))))
 
-(defmethod write-csv-value (val csv-stream
-                            &key (formatter #'format-csv-value)
-                            (quote *quote*)
-                            (separator *separator*)
-                            (escape *quote-escape*)
-                            (always-quote *always-quote*)
-                            &aux
-                            (formatted-value (funcall formatter val))
-                            (should-quote (or always-quote
-                                           (chars-in (list quote separator *newline*)
-                                            formatted-value))))
-  "Writes val to csv-stream in a formatted fashion.
+(defgeneric write-csv-value (val csv-stream
+                             &key formatter quote separator escape always-quote)
+  (:documentation "Writes val to csv-stream in a formatted fashion.
 
 Keywords
 
@@ -91,16 +83,27 @@ escape: escaping character. Defaults to *quote-escape*
 
 newline: newline character. Defaults to *newline
 
-always-quote: Defaults to *always-quote*"
-  (when should-quote
-    (write-char quote csv-stream))
-  (iter
-    (for char in-sequence formatted-value)
-    (if (char= quote char)
-        (write-sequence escape csv-stream)
-        (write-char char csv-stream)))
-  (when should-quote
-    (write-char quote csv-stream)))
+always-quote: Defaults to *always-quote*")
+  (:method (val csv-stream
+            &key (formatter #'format-csv-value)
+            (quote *quote*)
+            (separator *separator*)
+            (escape *quote-escape*)
+            (always-quote *always-quote*)
+            &aux
+            (formatted-value (funcall formatter val))
+            (should-quote (or always-quote
+                              (chars-in (list quote separator *newline*)
+                                        formatted-value))))
+    (when should-quote
+      (write-char quote csv-stream))
+    (iter
+      (for char in-sequence formatted-value)
+      (if (char= quote char)
+          (write-sequence escape csv-stream)
+          (write-char char csv-stream)))
+    (when should-quote
+      (write-char quote csv-stream))))
 
 (defmacro with-csv-output-stream ((name inp) &body body)
   (alexandria:with-unique-names (opened?)
