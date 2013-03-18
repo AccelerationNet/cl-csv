@@ -4,6 +4,12 @@
 (in-package :cl-csv-test)
 (cl-interpol:enable-interpol-syntax)
 
+(defun run-all-tests (&optional (use-debugger t))
+  (let ((lisp-unit:*print-failures* t)
+        (lisp-unit:*print-errors* t)
+        (lisp-unit::*use-debugger* use-debugger))
+   (run-tests :all)))
+
 (defparameter +test-csv-quoted-path+
   (asdf:system-relative-pathname :cl-csv "tests/test-csv-quoted.csv"))
 (defparameter +test-csv-unquoted-path+
