@@ -359,6 +359,7 @@ always-quote: Defaults to *always-quote*"
   (let ((sample (or var iterate::*result-var*)))
     (alexandria:with-unique-names (i sample-size sigil buffer)
       `(progn
+        ,@(when var `((with ,var)))
         (with ,sample-size = (or ,size 100))
         (with ,buffer = (make-array ,sample-size :initial-element ',sigil))
         (with ,i = 0)
