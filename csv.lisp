@@ -5,6 +5,7 @@
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*newline* :*quote-escape*
+   #:read-csv-sample #:sampling
 
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
@@ -357,9 +358,9 @@ always-quote: Defaults to *always-quote*"
 (iterate:defmacro-clause (SAMPLING expr &optional INTO var SIZE size)
   "resevoir sample the input"
   (let ((sample (or var iterate::*result-var*)))
-    (alexandria:with-unique-names (i sample-size sigil buffer)
+    (alexandria:with-unique-names (i sample-size sigil buffer row)
       `(progn
-        ,@(when var `((with ,var)))
+        (with ,sample)
         (with ,sample-size = (or ,size 100))
         (with ,buffer = (make-array ,sample-size :initial-element ',sigil))
         (with ,i = 0)
@@ -373,22 +374,27 @@ always-quote: Defaults to *always-quote*"
          ;; convert our sample to a list, but only if we actually took the sample
          (when (plusp ,i)
            (setf ,sample
-                 (iter (for row in-vector ,buffer)
-                   (unless (eq row ',sigil)
-                     (collect row))))))))))
+                 (iter (for ,row in-vector ,buffer)
+                   (until (eq ,row ',sigil))
+                   (collect ,row)))))))))
 
 (defun read-csv-sample (stream-or-string sample-size
-                        &key row-fn map-fn skip-first-p
+                        &key
+                        row-fn map-fn
+                        skip-first-p
                         ((:separator *separator*) *separator*)
                         ((:quote *quote*) *quote*)
                         ((:escape *quote-escape*) *quote-escape*))
 
   (iter
     (for row in-csv stream-or-string skipping-header skip-first-p)
-    (for data = (if map-fn (funcall map-fn row) row))
-    (sampling data INTO sample SIZE sample-size)
+    (sampling row into sample size sample-size)
     (finally
-     (if row-fn (mapcar row-fn sample) sample))))
+     (return
+       (iter (for row in sample)
+         (when map-fn (setf row (funcall map-fn row)))
+         (when row-fn (funcall row-fn sample))
+         (collect row))))))
 
 (defun read-csv (stream-or-string
                  &key row-fn map-fn sample skip-first-p

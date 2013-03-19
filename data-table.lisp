@@ -9,9 +9,11 @@
     (if (and has-column-names (first-iteration-p))
         (setf (data-table:column-names dt) data)
         (if sample
-            (sampling data into rows size sample)
+            (sampling data into samples size sample)
             (collect data into rows)))
-    (finally (setf (data-table:rows dt) rows)))
+    (finally
+     (setf (data-table:rows dt)
+           (if sample samples rows))))
   (if munge-types
       (data-table:coerce-data-table-of-strings-to-types dt)
       (data-table::ensure-column-data-types dt))

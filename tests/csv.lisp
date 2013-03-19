@@ -4,6 +4,9 @@
 (in-package :cl-csv-test)
 (cl-interpol:enable-interpol-syntax)
 
+(defmacro assert-length (exp it &rest them)
+  `(assert-eql ,exp (length ,it) ,@them))
+
 (defun run-all-tests (&optional (use-debugger t))
   (let ((lisp-unit:*print-failures* t)
         (lisp-unit:*print-errors* t)
@@ -189,3 +192,21 @@ multiline" (nth 3 (first data)) ))
     (assert-equal  "6" c)
     (for i from 0)
     (finally (assert-equal 0 i))))
+
+(define-test sampling-iterate
+  (assert-length
+   9 (iter (for row in-csv *test-csv1*)
+       (cl-csv:sampling row)))
+  (assert-length
+   2 (iter (for row in-csv *test-csv1*)
+       (cl-csv:sampling row into sample size 2)
+       (finally (return sample))))
+  (assert-length
+   2 (read-csv-sample *test-csv1* 2))
+  (assert-length
+   3 (iter (for row in-csv *test-csv1* skipping-header t)
+       (cl-csv::sampling row size 3)))
+  (assert-length
+   9 (iter (for row in-csv *test-csv1*)
+       (cl-csv:sampling row into sample size 25)
+       (finally (return sample)))))
