@@ -4,7 +4,7 @@
   (:use :cl :cl-user :iterate)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
-   :*quote* :*separator* :*newline* :*quote-escape*
+   :*quote* :*separator* :*newline* :*quote-escape* :*trim-blanks*
    #:read-csv-sample #:sampling
 
    ;; clsql stuff
@@ -29,6 +29,7 @@
 (defvar *newline* #?"\r\n" "Default newline string")
 (defvar *always-quote* nil "Default setting for always quoting")
 (defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
+(defvar *trim-blanks* t "Trim unquoted blanks.")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -223,6 +224,7 @@ always-quote: Defaults to *always-quote*"
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
+       ((:trim-blanks *trim-blanks*) *trim-blanks*)
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
@@ -251,11 +253,15 @@ always-quote: Defaults to *always-quote*"
                  (vector-push-extend char current))
                (finish-item ()
                  ;; trim off unquoted whitespace at the end
-                 (when (eql state :collecting)
+                 (when (and *trim-blanks* (eql state :collecting))
                    (iter (while (white-space? (current-last-char)))
                      (decf (fill-pointer current))))
                  ;; collect the result
-                 (collect (copy-seq (string current)) into items)
+                 (collect (if (eql state :waiting)
+			      ;; we didn't read any data in between
+			      ;; separators, return nil
+			      nil
+			      (copy-seq (string current))) into items)
                  ;; go back to waiting for items
                  (setf state :waiting)
                  (setf (fill-pointer current) 0))
@@ -313,12 +319,18 @@ always-quote: Defaults to *always-quote*"
               ;; if we end up trying to read
               (setf state :waiting-for-next))
              (:collecting
-               (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
-                                i line))))
+	      ;; when trim-blanks is nil, we might have read blanks between
+	      ;; the previous separator and the current opening quote
+	      (if (and (not *trim-blanks*) (every #'white-space? current))
+		  (progn
+		    (setf (fill-pointer current) 0)
+		    (setf state :collecting-quoted))
+		  (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
+				   i line)))))
           (t
            (ecase state
              (:waiting
-              (unless (white-space? c)
+              (unless (and *trim-blanks* (white-space? c))
                 (setf state :collecting)
                 (vector-push-extend c current)))
              (:waiting-for-next
@@ -400,7 +412,8 @@ always-quote: Defaults to *always-quote*"
                  &key row-fn map-fn sample skip-first-p
                  ((:separator *separator*) *separator*)
                  ((:quote *quote*) *quote*)
-                 ((:escape *quote-escape*) *quote-escape*))
+                 ((:escape *quote-escape*) *quote-escape*)
+		   ((:trim-blanks *trim-blanks*) *trim-blanks*))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 

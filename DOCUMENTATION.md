@@ -64,6 +64,13 @@ _[Special variable]_
 
  Default separator character
 
+_[Special variable]_
+**\*trim-blanks***
+
+ When true (the default), unquoted blanks are just skipped, when nil
+ unquoted blanks are collected unless when found between a separator and the
+ opening quote.
+
 - - -
 _[Condition type]_
 **csv-parse-error**
@@ -98,7 +105,7 @@ format
 _[Function]_
 **read-csv** ( *stream-or-string* `&key` *row-fn* *map-fn* *sample*
 *skip-first-p* ( separator \*separator\* ) (quote \*quote\*) (escape
-\*quote-escape\*))* =\> \*result*
+\*quote-escape\*) (trim-blanks \*trim-blanks\*)* =\> \*result*
 
 Read in a CSV by data-row (which due to quoted newlines may be more
 than one line from the stream)
@@ -126,8 +133,8 @@ escape: escape character. Defaults to \*quote-escape*
 - - -
 _[Function]_
 **read-csv-row** ( *stream-or-string* `&key` (separator \*separator\*)
-(quote \*quote\*) (escape \*quote-escape\*) `&aux` *current state line
-llen c elen*) =\> \*result\*
+(quote \*quote\*) (escape \*quote-escape\*) (trim-blanks \*trim-blanks\*)
+`&aux` *current state line llen c elen*) =\> \*result\*
 
 
 Read in a CSV by _data-row_ (which due to quoted newlines may be more

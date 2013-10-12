@@ -79,6 +79,15 @@ B. \"\"Shut up.\"\"
 C. \"\"If you don't calm down I'm not sending anyone.\"\"
 D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
 
+(defparameter *test-csv-data-trim-blanks*
+  "'a', 'b',,'',   ,  plop  ,'c'")
+
+(defparameter *test-csv-rows-trim-blanks-t*
+  '(("a" "b" NIL "" NIL "plop" "c")))
+
+(defparameter *test-csv-rows-trim-blanks-nil*
+  '(("a" "b" NIL "" "   " "  plop  " "c")))
+
 (define-test parsing-1
   (assert-equal *test-csv1-rows* (read-csv *test-csv1*))
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
@@ -98,6 +107,12 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
        "first name,\"a test unfinished quote, other stuff"))
   (assert-eql 3 (length (read-csv-row "first name, \"a test broken quote\", other stuff")))
   )
+
+(define-test trimming-blanks
+    (assert-equal *test-csv-rows-trim-blanks-t*
+		  (read-csv *test-csv-data-trim-blanks* :quote #\' :trim-blanks t))
+  (assert-equal *test-csv-rows-trim-blanks-nil*
+		(read-csv *test-csv-data-trim-blanks* :quote #\' :trim-blanks nil)))
 
 (define-test no-trailing-parse
   (let* ((data (read-csv *test-csv-no-trailing-newline*))
