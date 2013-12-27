@@ -22,12 +22,14 @@
   :components ((:module :tests
 			:serial t
 			:components ((:file "csv"))))
-  :depends-on (:cl-csv :lisp-unit))
+  :depends-on (:cl-csv :lisp-unit2))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
   (asdf:oos 'asdf:load-op :cl-csv-test)
   (let ((*package* (find-package :cl-csv-test)))
-    (eval (read-from-string "(run-tests :all)"))))
+    (eval (read-from-string
+           "(with-summary (:name :cl-csv)
+              (run-tests :package :cl-csv-test))"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
