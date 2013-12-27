@@ -1,4 +1,7 @@
-(in-package :cl-csv-test)
+(defpackage :cl-csv-test.speed-tests
+  (:use :cl :cl-user :cl-csv :lisp-unit2 :iter))
+
+(in-package :cl-csv-test.speed-tests)
 
 (defun log-time (&optional (time (get-universal-time)) stream)
   "returns a date as ${mon}/${d}/${y} ${h}:${min}:{s}, defaults to get-universal-time"
@@ -38,42 +41,45 @@
 (defparameter +test-big-file+
   (asdf:system-relative-pathname :cl-csv "tests/long-test.csv"))
 
-(defun ensure-big-file (&optional (n 120000))
-  (time-and-log-around (test-log "Ensure large file test")
-    (with-open-file (s +test-big-file+ :direction :output :if-exists :supersede )
-      (iter (for i from 0 to n)
-        (write-csv-row '("Russ" "Tyndall" "Software Developer's, \"Position\""
-                         "26.2" "1" "further columns" "even" "more" "data")
-                       :stream s)))))
+(define-test write-big-file ()
+  (let ((n 120000))
+    (time-and-log-around (test-log "write large file test")
+      (with-open-file (s +test-big-file+ :direction :output :if-exists :supersede )
+        (iter (for i from 0 to n)
+          (write-csv-row '("Russ" "Tyndall" "Software Developer's, \"Position\""
+                           "26.2" "1" "further columns" "even" "more" "data")
+                         :stream s))))))
 
-(defun count-big-file-csv-rows (&aux (cnt 0))
-  (time-and-log-around (test-log "read large file test")
-    (read-csv +test-big-file+
-              :row-fn (lambda (r) (declare (ignore r))
-                        (incf cnt))
-              ))
-  cnt)
+(define-test count-big-file-csv-rows ()
+  (let ((cnt 0))
+    (time-and-log-around (test-log "read large file test")
+      (read-csv +test-big-file+
+                :row-fn (lambda (r) (declare (ignore r))
+                          (incf cnt))
+                ))
+    cnt))
 
-(defun read-by-line-and-buffer (&aux (cnt 0) (cnt2 0))
-  (time-and-log-around (test-log "read large file by lines")
-    (cl-csv::with-csv-input-stream (s +test-big-file+ )
-    (iter (for line in-stream s using #'read-line )
-      (incf cnt))))
-  
-  (time-and-log-around (test-log "read large file by buffer")
-    (cl-csv::with-csv-input-stream (s +test-big-file+ )
-      (iter
-        (with buffer = (make-array 80 :element-type 'character ))
-        (with fill)
-        (handler-case (setf fill (read-sequence buffer s))
-          (end-of-file () (finish)))
-        (incf cnt2)
-        (while (= 80 fill))
-        )))
+(define-test read-by-line-and-buffer ()
+  (let ((cnt 0) (cnt2 0))
+    (time-and-log-around (test-log "read large file by lines")
+      (cl-csv::with-csv-input-stream (s +test-big-file+ )
+        (iter (for line in-stream s using #'read-line )
+          (incf cnt))))
 
-  (values cnt cnt2))
+    (time-and-log-around (test-log "read large file by buffer")
+      (cl-csv::with-csv-input-stream (s +test-big-file+ )
+        (iter
+          (with buffer = (make-array 80 :element-type 'character ))
+          (with fill)
+          (handler-case (setf fill (read-sequence buffer s))
+            (end-of-file () (finish)))
+          (incf cnt2)
+          (while (= 80 fill))
+          )))
 
-(defun collect-big-file-csv-rows ()
+    (values cnt cnt2)))
+
+(define-test collect-big-file-csv-rows ()
   (time-and-log-around (test-log "read large file test")
     (read-csv +test-big-file+))
   nil ; so we dont print 10m to the repl
