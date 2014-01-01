@@ -4,7 +4,7 @@
   (:use :cl :cl-user :iterate)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
-   :*quote* :*separator* :*newline* :*quote-escape*
+   :*quote* :*separator* :*newline* :*quote-escape* :*empty-string-is-nil*
    #:read-csv-sample #:sampling
 
    ;; clsql stuff
@@ -29,6 +29,10 @@
 (defvar *newline* #?"\r\n" "Default newline string")
 (defvar *always-quote* nil "Default setting for always quoting")
 (defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
+(defvar *empty-string-is-nil* nil
+  "Should empty string values, be nil or \"\".
+   Unquoted values are always trimmed of surrounding whitespace.
+   Quoted values are never be trimmed")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -223,6 +227,7 @@ always-quote: Defaults to *always-quote*"
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
+     ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*)
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
@@ -255,7 +260,9 @@ always-quote: Defaults to *always-quote*"
                    (iter (while (white-space? (current-last-char)))
                      (decf (fill-pointer current))))
                  ;; collect the result
-                 (collect (copy-seq (string current)) into items)
+                 (if (and *empty-string-is-nil* (zerop (length (string current))))
+                     (collect nil into items)
+                     (collect (copy-seq (string current)) into items))
                  ;; go back to waiting for items
                  (setf state :waiting)
                  (setf (fill-pointer current) 0))
@@ -384,7 +391,8 @@ always-quote: Defaults to *always-quote*"
                         skip-first-p
                         ((:separator *separator*) *separator*)
                         ((:quote *quote*) *quote*)
-                        ((:escape *quote-escape*) *quote-escape*))
+                        ((:escape *quote-escape*) *quote-escape*)
+                        ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*))
 
   (iter
     (for row in-csv stream-or-string skipping-header skip-first-p)
@@ -400,7 +408,8 @@ always-quote: Defaults to *always-quote*"
                  &key row-fn map-fn sample skip-first-p
                  ((:separator *separator*) *separator*)
                  ((:quote *quote*) *quote*)
-                 ((:escape *quote-escape*) *quote-escape*))
+                 ((:escape *quote-escape*) *quote-escape*)
+                 ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 

@@ -116,8 +116,12 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
     (assert-equal data data2)))
 
 (define-test data-with-whitespace (:tags '(whitespace parsing))
-  (let ((data (read-csv-row "  first    ,     last ,  \" other \"  ")))
-    (assert-equal '("first" "last" " other ") data)))
+  (let ((data (read-csv-row "  first    ,     last ,  \" other \",\"\",,  \" \" "
+                            :empty-string-is-nil t)))
+    (assert-equal '("first" "last" " other " nil nil " ") data))
+  (let ((data (read-csv-row "  first    ,     last ,  \" other \",\"\",,  \" \" "
+                            :empty-string-is-nil nil)))
+    (assert-equal '("first" "last" " other " "" "" " ") data)))
 
 (define-test files (:tags '(parsing files))
   (iter (for csv in +test-files+)
