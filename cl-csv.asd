@@ -28,8 +28,10 @@
   (asdf:oos 'asdf:load-op :cl-csv-test)
   (let ((*package* (find-package :cl-csv-test)))
     (eval (read-from-string
-           "(with-summary (:name :cl-csv)
-              (run-tests :package :cl-csv-test))"))))
+           "(run-tests
+               :package :cl-csv-test
+               :name :cl-csv
+               :run-contexts #'with-summary-context )"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer

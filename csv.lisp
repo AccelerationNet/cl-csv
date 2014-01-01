@@ -33,7 +33,7 @@
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
 
-(define-condition csv-parse-error (simple-condition)
+(define-condition csv-parse-error (error)
   ((format-control :accessor format-control :initarg :format-control :initform nil)
    (format-args :accessor format-args :initarg :format-args :initform nil))
   (:report (lambda (c s)
