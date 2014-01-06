@@ -132,7 +132,6 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
                  :quote #\'))
 
   (assert-error 'csv-parse-error
-   '("  first    " "     last " " other " "" nil " ")
    (read-csv-row "  first    ,     last , ' other ','',, "
                  :unquoted-empty-string-is-nil t
                  :quoted-empty-string-is-nil nil
@@ -141,7 +140,6 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
    "whitespace  before quoted values is a parse error if we are
     not trimming ")
   (assert-error 'csv-parse-error
-   '("  first    " "     last " " other " "" nil " ")
    (read-csv-row "  first    ,     last ,' other ' ,'',, "
                  :unquoted-empty-string-is-nil t
                  :quoted-empty-string-is-nil nil

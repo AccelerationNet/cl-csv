@@ -279,9 +279,9 @@ always-quote: Defaults to *always-quote*"
                       ;; got a zero length string?
                       (zerop (length (string current)))
                       ;; should we collect nil for zero length strings?
-                      (or (and (member state '(:collecting :waiting))
+                      (or (and (member state '(:waiting))
                                *unquoted-empty-string-is-nil*)
-                          (and (member state '(:collecting-quoted :waiting-for-next))
+                          (and (member state '(:waiting-for-next))
                                *quoted-empty-string-is-nil*)))
                      (collect nil into items)
                      (collect (copy-seq (string current)) into items))
@@ -351,7 +351,7 @@ always-quote: Defaults to *always-quote*"
                 (setf state :collecting)
                 (vector-push-extend c current)))
              (:waiting-for-next
-              (unless (white-space? c)
+              (unless (and *trim-outer-whitespace* (white-space? c))
                 (csv-parse-error
                  "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
                  i line)))
