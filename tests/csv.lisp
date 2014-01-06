@@ -115,13 +115,74 @@ D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
         (third (second data)))
     (assert-equal data data2)))
 
-(define-test data-with-whitespace (:tags '(whitespace parsing))
-  (let ((data (read-csv-row "  first    ,     last ,  \" other \",\"\",,  \" \" "
-                            :empty-string-is-nil t)))
-    (assert-equal '("first" "last" " other " nil nil " ") data))
-  (let ((data (read-csv-row "  first    ,     last ,  \" other \",\"\",,  \" \" "
-                            :empty-string-is-nil nil)))
-    (assert-equal '("first" "last" " other " "" "" " ") data)))
+(define-test data-with-whitespace-trim (:tags '(whitespace parsing trim))
+  (assert-equal
+   '("first" "last" " other " "" nil nil)
+   (read-csv-row "  first    ,     last ,  ' other ','',,  "
+                 :unquoted-empty-string-is-nil t
+                 :quoted-empty-string-is-nil nil
+                 :trim-outer-whitespace t
+                 :quote #\'))
+  (assert-equal
+   '("  first    " "     last " " other " "" nil " ")
+   (read-csv-row "  first    ,     last ,' other ','',, "
+                 :unquoted-empty-string-is-nil t
+                 :quoted-empty-string-is-nil nil
+                 :trim-outer-whitespace nil
+                 :quote #\'))
+
+  (assert-error 'csv-parse-error
+   '("  first    " "     last " " other " "" nil " ")
+   (read-csv-row "  first    ,     last , ' other ','',, "
+                 :unquoted-empty-string-is-nil t
+                 :quoted-empty-string-is-nil nil
+                 :trim-outer-whitespace nil
+                 :quote #\')
+   "whitespace  before quoted values is a parse error if we are
+    not trimming ")
+  (assert-error 'csv-parse-error
+   '("  first    " "     last " " other " "" nil " ")
+   (read-csv-row "  first    ,     last ,' other ' ,'',, "
+                 :unquoted-empty-string-is-nil t
+                 :quoted-empty-string-is-nil nil
+                 :trim-outer-whitespace nil
+                 :quote #\')
+   "whitespace after quoted values is a parse error if we are
+    not trimming ")
+  )
+
+(define-test data-with-whitespace-nilling (:tags '(whitespace parsing trim))
+  (assert-equal
+   '("first" "last" " other " nil nil nil)
+   (read-csv-row "  first    ,     last ,  ' other '   ,'',,  "
+                 :quoted-empty-string-is-nil t
+                 :unquoted-empty-string-is-nil t
+                 :quote #\'))
+  (assert-equal
+   '("first" "last" " other " "" "" "")
+   (read-csv-row "  first    ,     last ,' other ','',, "
+                 :quoted-empty-string-is-nil nil
+                 :unquoted-empty-string-is-nil nil
+                 :quote #\'))
+
+  (assert-equal
+   '("first" "last" " other " nil "" "")
+   (read-csv-row "  first    ,     last , ' other ','',, "
+                 :quoted-empty-string-is-nil T
+                 :unquoted-empty-string-is-nil nil
+                 :quote #\')
+   "whitespace  before quoted values is a parse error if we are
+    not trimming ")
+  (assert-equal
+   '("first" "last" " other " "" nil nil)
+   (read-csv-row "  first    ,     last ,' other ' ,'',, "
+                 :quoted-empty-string-is-nil nil
+                 :unquoted-empty-string-is-nil t
+                 :quote #\')
+   "whitespace after quoted values is a parse error if we are
+    not trimming ")
+  )
+
 
 (define-test files (:tags '(parsing files))
   (iter (for csv in +test-files+)

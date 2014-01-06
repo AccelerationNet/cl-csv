@@ -29,10 +29,19 @@
 (defvar *newline* #?"\r\n" "Default newline string")
 (defvar *always-quote* nil "Default setting for always quoting")
 (defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
-(defvar *empty-string-is-nil* nil
+(defvar *unquoted-empty-string-is-nil* nil
+  "Should unquoted empty string values, be nil or \"\".")
+
+(defvar *quoted-empty-string-is-nil* nil
   "Should empty string values, be nil or \"\".
    Unquoted values are always trimmed of surrounding whitespace.
    Quoted values are never be trimmed")
+
+(defvar *trim-outer-whitespace* t
+  "Should white space between delimiters and data or quotes be removed
+
+   These underscores (if they were spaces) are the locations in question
+   'a',_b_,_' c '_,_d ")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -227,7 +236,12 @@ always-quote: Defaults to *always-quote*"
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
-     ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*)
+     ((:unquoted-empty-string-is-nil *unquoted-empty-string-is-nil*)
+      *unquoted-empty-string-is-nil*)
+     ((:quoted-empty-string-is-nil *quoted-empty-string-is-nil*)
+      *quoted-empty-string-is-nil*)
+     ((:trim-outer-whitespace *trim-outer-whitespace*)
+      *trim-outer-whitespace*)
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
@@ -256,11 +270,19 @@ always-quote: Defaults to *always-quote*"
                  (vector-push-extend char current))
                (finish-item ()
                  ;; trim off unquoted whitespace at the end
-                 (when (eql state :collecting)
+                 (when (and (eql state :collecting)
+                            *trim-outer-whitespace*)
                    (iter (while (white-space? (current-last-char)))
                      (decf (fill-pointer current))))
                  ;; collect the result
-                 (if (and *empty-string-is-nil* (zerop (length (string current))))
+                 (if (and
+                      ;; got a zero length string?
+                      (zerop (length (string current)))
+                      ;; should we collect nil for zero length strings?
+                      (or (and (member state '(:collecting :waiting))
+                               *unquoted-empty-string-is-nil*)
+                          (and (member state '(:collecting-quoted :waiting-for-next))
+                               *quoted-empty-string-is-nil*)))
                      (collect nil into items)
                      (collect (copy-seq (string current)) into items))
                  ;; go back to waiting for items
@@ -325,7 +347,7 @@ always-quote: Defaults to *always-quote*"
           (t
            (ecase state
              (:waiting
-              (unless (white-space? c)
+              (unless (and *trim-outer-whitespace* (white-space? c))
                 (setf state :collecting)
                 (vector-push-extend c current)))
              (:waiting-for-next
@@ -392,7 +414,12 @@ always-quote: Defaults to *always-quote*"
                         ((:separator *separator*) *separator*)
                         ((:quote *quote*) *quote*)
                         ((:escape *quote-escape*) *quote-escape*)
-                        ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*))
+                        ((:unquoted-empty-string-is-nil *unquoted-empty-string-is-nil*)
+                         *unquoted-empty-string-is-nil*)
+                        ((:quoted-empty-string-is-nil *quoted-empty-string-is-nil*)
+                         *quoted-empty-string-is-nil*)
+                        ((:trim-outer-whitespace *trim-outer-whitespace*)
+                         *trim-outer-whitespace*))
 
   (iter
     (for row in-csv stream-or-string skipping-header skip-first-p)
@@ -409,7 +436,12 @@ always-quote: Defaults to *always-quote*"
                  ((:separator *separator*) *separator*)
                  ((:quote *quote*) *quote*)
                  ((:escape *quote-escape*) *quote-escape*)
-                 ((:empty-string-is-nil *empty-string-is-nil*) *empty-string-is-nil*))
+                 ((:unquoted-empty-string-is-nil *unquoted-empty-string-is-nil*)
+                  *unquoted-empty-string-is-nil*)
+                 ((:quoted-empty-string-is-nil *quoted-empty-string-is-nil*)
+                  *quoted-empty-string-is-nil*)
+                 ((:trim-outer-whitespace *trim-outer-whitespace*)
+                  *trim-outer-whitespace*))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 
