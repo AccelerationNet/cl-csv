@@ -5,7 +5,11 @@
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*newline* :*quote-escape* :*empty-string-is-nil*
-   #:read-csv-sample #:sampling
+   #:read-csv-sample #:sampling #:data #:row
+
+   ;; signals
+   #:*enable-signals*
+   #:filter #:csv-data-read #:csv-row-read
 
    ;; clsql stuff
    :export-query :import-from-csv :serial-import-from-csv
@@ -43,6 +47,9 @@
    These underscores (if they were spaces) are the locations in question
    'a',_b_,_' c '_,_d ")
 
+(defvar *enable-signals* nil
+  "Should the reading and writing process enable filtering signals")
+
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
 
@@ -57,6 +64,26 @@
 
 (defun csv-parse-error (msg &rest args)
   (error 'csv-parse-error :format-control msg :format-args args))
+
+(define-condition csv-data-read ()
+  ((data :accessor data :initarg :data :initform nil)))
+
+(defun csv-data-read ( data )
+  (if *enable-signals*
+      (restart-case
+          (progn (signal 'csv-data-read :data data ) data)
+        (filter (new-data) new-data))
+      data))
+
+(define-condition csv-row-read ()
+  ((row :accessor row :initarg :row :initform nil)))
+
+(defun csv-row-read ( row )
+  (if *enable-signals*
+      (restart-case
+          (progn (signal 'csv-row-read :row row ) row)
+        (filter (new-row) new-row))
+      row))
 
 ;;;; Writing csvs
 
@@ -260,104 +287,107 @@ always-quote: Defaults to *always-quote*"
 
   ;; this just ensures that a file opened here is closed here
   (with-csv-input-stream (in-stream stream-or-string)
-    (iter
-      (for i upfrom 0)
-      (when (and line (< i llen))
-        (setf c (elt line i)))
-      (labels ((current-last-char ()
-                 (elt current (- (fill-pointer current) 1)))
-               (store-char (&optional char)
-                 (vector-push-extend char current))
-               (finish-item ()
-                 ;; trim off unquoted whitespace at the end
-                 (when (and (eql state :collecting)
-                            *trim-outer-whitespace*)
-                   (iter (while (white-space? (current-last-char)))
-                     (decf (fill-pointer current))))
-                 ;; collect the result
-                 (if (and
-                      ;; got a zero length string?
-                      (zerop (length (string current)))
-                      ;; should we collect nil for zero length strings?
-                      (or (and (member state '(:waiting))
-                               *unquoted-empty-string-is-nil*)
-                          (and (member state '(:waiting-for-next))
-                               *quoted-empty-string-is-nil*)))
-                     (collect nil into items)
-                     (collect (copy-seq (string current)) into items))
-                 ;; go back to waiting for items
-                 (setf state :waiting)
-                 (setf (fill-pointer current) 0))
-               (skip-escape ()
-                 ;; we just read the first escape char
-                 (incf i (- (length *quote-escape*) 1)))
-               (read-line-in ()
-                 (handler-case
-                     ;; reset index, line and len for the next line of data
-                     (setf i -1 ;; we will increment immediately after this
-                           line (read-line in-stream)
-                           llen (length line))
-                   (end-of-file (sig)
-                     (ecase state
-                       (:waiting (error sig))
-                       (:waiting-for-next (return items))
-                       (:collecting (finish-item) (return items))
-                       (:collecting-quoted (csv-parse-error sig)))
-                     ))))
-        (cond
-          ;; if we dont have a line yet read one
-          ((null line) (read-line-in))
+    (csv-row-read
+     (iter
+       (for i upfrom 0)
+       (when (and line (< i llen))
+         (setf c (elt line i)))
+       (labels ((current-last-char ()
+                  (elt current (- (fill-pointer current) 1)))
+                (store-char (&optional char)
+                  (vector-push-extend char current))
+                (finish-item ()
+                  ;; trim off unquoted whitespace at the end
+                  (when (and (eql state :collecting)
+                             *trim-outer-whitespace*)
+                    (iter (while (white-space? (current-last-char)))
+                      (decf (fill-pointer current))))
 
-          ;; we made it to the end of our line
-          ((= i llen) ;; end of line
-           (case state
-             ;; in a quoted string that contains new-lines
-             (:collecting-quoted
-              (store-char #\newline)
-              (read-line-in))
-             (t (finish-item) (return items))))
+                  ;; collect the result
+                  (if (and
+                       ;; got a zero length string?
+                       (zerop (length (string current)))
+                       ;; should we collect nil for zero length strings?
+                       (or (and (member state '(:waiting))
+                                *unquoted-empty-string-is-nil*)
+                           (and (member state '(:waiting-for-next))
+                                *quoted-empty-string-is-nil*)))
+                      (collect (csv-data-read nil) into items)
+                      (collect (csv-data-read
+                                (copy-seq (string current))) into items))
+                  ;; go back to waiting for items
+                  (setf state :waiting)
+                  (setf (fill-pointer current) 0))
+                (skip-escape ()
+                  ;; we just read the first escape char
+                  (incf i (- (length *quote-escape*) 1)))
+                (read-line-in ()
+                  (handler-case
+                      ;; reset index, line and len for the next line of data
+                      (setf i -1   ;; we will increment immediately after this
+                            line (read-line in-stream)
+                            llen (length line))
+                    (end-of-file (sig)
+                      (ecase state
+                        (:waiting (error sig))
+                        (:waiting-for-next (return items))
+                        (:collecting (finish-item) (return items))
+                        (:collecting-quoted (csv-parse-error sig)))
+                      ))))
+         (cond
+           ;; if we dont have a line yet read one
+           ((null line) (read-line-in))
 
-          ;; the next characters are an escape sequence, start skipping
-          ((and (or (eql state :collecting-quoted)
-                    (eql state :collecting))
-                *quote-escape* ;; if this is null there is no escape
-                (%escape-seq? line i *quote-escape* llen elen))
-           (store-char *quote*)
-           (skip-escape))
+           ;; we made it to the end of our line
+           ((= i llen)                  ;; end of line
+            (case state
+              ;; in a quoted string that contains new-lines
+              (:collecting-quoted
+               (store-char #\newline)
+               (read-line-in))
+              (t (finish-item) (return items))))
 
-          ;; the character is data separator, so gather the word unless
-          ;; it is quoted data
-          ((char= *separator* c)
-           (ecase state
-             (:collecting-quoted (store-char c))
-             ((:collecting :waiting :waiting-for-next)
-              (finish-item))))
+           ;; the next characters are an escape sequence, start skipping
+           ((and (or (eql state :collecting-quoted)
+                     (eql state :collecting))
+                 *quote-escape*         ;; if this is null there is no escape
+                 (%escape-seq? line i *quote-escape* llen elen))
+            (store-char *quote*)
+            (skip-escape))
 
-          ;; the character is a quote (and not an escape) so start an item
-          ;; finishing the item is the responsibility of separator/eol
-          ((and *quote* (char= *quote* c))
-           (ecase state
-             (:waiting (setf state :collecting-quoted))
-             (:collecting-quoted
-              ;; if we end up trying to read
-              (setf state :waiting-for-next))
-             (:collecting
+           ;; the character is data separator, so gather the word unless
+           ;; it is quoted data
+           ((char= *separator* c)
+            (ecase state
+              (:collecting-quoted (store-char c))
+              ((:collecting :waiting :waiting-for-next)
+               (finish-item))))
+
+           ;; the character is a quote (and not an escape) so start an item
+           ;; finishing the item is the responsibility of separator/eol
+           ((and *quote* (char= *quote* c))
+            (ecase state
+              (:waiting (setf state :collecting-quoted))
+              (:collecting-quoted
+               ;; if we end up trying to read
+               (setf state :waiting-for-next))
+              (:collecting
                (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
                                 i line))))
-          (t
-           (ecase state
-             (:waiting
-              (unless (and *trim-outer-whitespace* (white-space? c))
-                (setf state :collecting)
-                (vector-push-extend c current)))
-             (:waiting-for-next
-              (unless (and *trim-outer-whitespace* (white-space? c))
-                (csv-parse-error
-                 "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
-                 i line)))
-             ((:collecting :collecting-quoted)
-              (vector-push-extend c current))))
-          )))))
+           (t
+            (ecase state
+              (:waiting
+               (unless (and *trim-outer-whitespace* (white-space? c))
+                 (setf state :collecting)
+                 (vector-push-extend c current)))
+              (:waiting-for-next
+               (unless (and *trim-outer-whitespace* (white-space? c))
+                 (csv-parse-error
+                  "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
+                  i line)))
+              ((:collecting :collecting-quoted)
+               (vector-push-extend c current))))
+           ))))))
 
 (iterate:defmacro-clause (FOR var IN-CSV input
                               &optional SKIPPING-HEADER skip-first-p
@@ -381,7 +411,14 @@ always-quote: Defaults to *always-quote*"
           (progn
             ;; optionally skip the first row
             (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
-            (for ,var = (read-csv-row ,stream)))
+            (for ,var =
+                 (restart-case (read-csv-row ,stream)
+                   (continue ()
+                     :report "Skip reading this row and try again on the next"
+                     (next-iteration))
+                   (filter (new-row)
+                     :report "Supply a different row to use instead of this erroring csv-row"
+                     new-row))))
         (end-of-file () (finish))))))
 
 (iterate:defmacro-clause (SAMPLING expr &optional INTO var SIZE size)

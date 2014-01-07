@@ -267,3 +267,40 @@ multiline" (nth 3 (first data)) ))
    9 (iter (for row in-csv *test-csv1*)
        (cl-csv:sampling row into sample size 25)
        (finally (return sample)))))
+
+(define-test csv-signal-enabling (:tags '(signals))
+  (assert-signal
+   'csv-row-read
+   (assert-signal
+    'csv-data-read
+    (let ((*enable-signals* t))
+      (cl-csv:read-csv "1,2,3"))))
+  (assert-no-signal
+   'csv-row-read
+   (assert-no-signal
+    'csv-data-read
+    (let ((*enable-signals* nil))
+      (cl-csv:read-csv "1,2,3")))))
+
+(define-test csv-filter (:tags '(signals))
+  (assert-equal
+   '(1 2 3)
+   (let ((*enable-signals* t))
+      (handler-bind ((csv-data-read
+                       (lambda (c) (invoke-restart 'filter (parse-integer (cl-csv::data c))))))
+        (cl-csv:read-csv-row "1,2,3"))))
+  (assert-equal
+   '(1 2 3)
+   (let ((*enable-signals* t))
+      (handler-bind ((csv-row-read
+                       (lambda (c) (invoke-restart 'filter (mapcar #'parse-integer (cl-csv::row c))))))
+        (cl-csv:read-csv-row "1,2,3")))))
+
+(define-test csv-continue-signals (:tags '(signals))
+  (handler-bind ((csv-parse-error #'continue))
+    (assert-equal
+     '(("1" "2" "3")
+       ("3" "4" "5"))
+     (cl-csv:read-csv "1,2,3
+2,3',4
+3,4,5" :quote #\'))))

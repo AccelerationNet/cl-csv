@@ -26,6 +26,16 @@ figured why not just release it anyway.
  * http://members.optusnet.com.au/apicard/csv-parser.lisp
  * http://www.cliki.net/fare-csv
 
+## Signals and Restarts
+ * `*enable-signals*` will cause a csv-data-read or csv-row-read to be
+   signaled for each piece of data and row read.  There is a `filter`
+   restart available which will cause the filter value to be used
+   instead.  Enabling signals is ~2xs as slow as not, so by default
+   they are not enabled.
+ * in-csv iterate clause and read-csv support continue and `filter`
+   restarts for errors occuring during read-csv-row
+
+
 ## Library Integration
 
  * [data-table](https://github.com/AccelerationNet/data-table) - functions for building data-tables from csv's, must `(asdf:load-system :cl-csv-data-table)`
