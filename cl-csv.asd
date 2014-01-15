@@ -11,7 +11,10 @@
   :description "Facilities for reading and writing CSV format files"
   :licence "BSD"
   :version "0.1"
-  :components ((:file "csv"))
+  :components ((:file "packages")
+               (:file "vars")
+               (:file "read-until")
+               (:file "csv"))
   :depends-on (:iterate :alexandria :cl-interpol))
 
 (defsystem :cl-csv-test
@@ -27,11 +30,7 @@
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
   (asdf:oos 'asdf:load-op :cl-csv-test)
   (let ((*package* (find-package :cl-csv-test)))
-    (eval (read-from-string
-           "(run-tests
-               :package :cl-csv-test
-               :name :cl-csv
-               :run-contexts #'with-summary-context )"))))
+    (eval (read-from-string "(run-all-tests)"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer

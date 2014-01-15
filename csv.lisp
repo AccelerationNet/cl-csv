@@ -1,54 +1,10 @@
 ;; -*- lisp -*-
-
-(cl:defpackage :cl-csv
-  (:use :cl :cl-user :iterate)
-  (:export :read-csv :csv-parse-error :format-csv-value
-   :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
-   :*quote* :*separator* :*newline* :*quote-escape* :*empty-string-is-nil*
-   #:read-csv-sample #:sampling #:data #:row
-
-   ;; signals
-   #:*enable-signals*
-   #:filter #:csv-data-read #:csv-row-read
-
-   ;; clsql stuff
-   :export-query :import-from-csv :serial-import-from-csv
-
-   ;; data table
-   #:get-data-table-from-csv
-   #:get-data-table-from-csv-list
-   #:data-table-to-csv
-   #:do-csv
-   #:*default-external-format*))
-
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
 
 ;;;; * Reading and Writing files in Comma-Seperated-Values format
 
 ;;;; Generating CSV files from lisp data
-
-(defvar *quote* #\" "Default quote character")
-(defvar *separator* #\, "Default separator character")
-(defvar *newline* #?"\r\n" "Default newline string")
-(defvar *always-quote* nil "Default setting for always quoting")
-(defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
-(defvar *unquoted-empty-string-is-nil* nil
-  "Should unquoted empty string values, be nil or \"\".")
-
-(defvar *quoted-empty-string-is-nil* nil
-  "Should empty string values, be nil or \"\".
-   Unquoted values are always trimmed of surrounding whitespace.
-   Quoted values are never be trimmed")
-
-(defvar *trim-outer-whitespace* t
-  "Should white space between delimiters and data or quotes be removed
-
-   These underscores (if they were spaces) are the locations in question
-   'a',_b_,_' c '_,_d ")
-
-(defvar *enable-signals* nil
-  "Should the reading and writing process enable filtering signals")
 
 (defun white-space? (c)
   (member c '(#\newline #\tab #\space #\return)))
@@ -122,7 +78,7 @@ quote: quoting character. Defaults to *quote*
 
 escape: escaping character. Defaults to *quote-escape*
 
-newline: newline character. Defaults to *newline
+newline: newline character. Defaults to *write-newline*
 
 always-quote: Defaults to *always-quote*")
   (:method (val csv-stream
@@ -131,10 +87,11 @@ always-quote: Defaults to *always-quote*")
             (separator *separator*)
             (escape *quote-escape*)
             (always-quote *always-quote*)
+            (newline *write-newline*)
             &aux
             (formatted-value (funcall formatter val))
             (should-quote (or always-quote
-                              (chars-in (list quote separator *newline*)
+                              (chars-in (list quote separator newline)
                                         formatted-value))))
     (when should-quote
       (write-char quote csv-stream))
@@ -170,7 +127,7 @@ always-quote: Defaults to *always-quote*")
                       ((:separator *separator*) *separator*)
                       ((:quote *quote*) *quote*)
                       ((:escape *quote-escape*) *quote-escape*)
-                      ((:newline *newline*) *newline*)
+                      ((:newline *write-newline*) *write-newline*)
                       ((:always-quote *always-quote*) *always-quote*))
 "
 Writes a list items to stream
@@ -185,7 +142,7 @@ quote: quoting character. Defaults to *quote*
 
 escape: escaping character. Defaults to *quote-escape*
 
-newline: newline character. Defaults to *newline
+newline: newline character. Defaults to *write-newline*
 
 always-quote: Defaults to *always-quote*"
   (with-csv-output-stream (csv-stream stream)
@@ -193,7 +150,7 @@ always-quote: Defaults to *always-quote*"
       (unless (first-iteration-p)
         (write-char *separator* csv-stream))
       (write-csv-value item csv-stream))
-    (write-sequence *newline* csv-stream)
+    (write-sequence *write-newline* csv-stream)
     (unless stream
       (get-output-stream-string csv-stream))))
 
@@ -203,7 +160,7 @@ always-quote: Defaults to *always-quote*"
                   ((:separator *separator*) *separator*)
                   ((:quote *quote*) *quote*)
                   ((:escape *quote-escape*) *quote-escape*)
-                  ((:newline *newline*) *newline*)
+                  ((:newline *write-newline*) *write-newline*)
                   ((:always-quote *always-quote*) *always-quote*))
   "Writes a csv to the given stream.
 
@@ -216,7 +173,7 @@ always-quote: Defaults to *always-quote*"
       a pathname (overwrites if the file exists)
     quote: quoting character. Defaults to *quote*
     escape: escaping character. Defaults to *quote-escape*
-    newline: newline character. Defaults to *newline
+    newline: newline character. Defaults to *write-newline*
     always-quote: Defaults to *always-quote*"
   (with-csv-output-stream (csv-stream stream)
     (iter (for row in rows-of-items)
@@ -269,6 +226,7 @@ always-quote: Defaults to *always-quote*"
       *quoted-empty-string-is-nil*)
      ((:trim-outer-whitespace *trim-outer-whitespace*)
       *trim-outer-whitespace*)
+     ((:newline *read-newline*) *read-newline*)
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
@@ -294,8 +252,11 @@ always-quote: Defaults to *always-quote*"
          (setf c (elt line i)))
        (labels ((current-last-char ()
                   (elt current (- (fill-pointer current) 1)))
-                (store-char (&optional char)
-                  (vector-push-extend char current))
+                (store-char (char)
+                  (typecase char
+                    (character (vector-push-extend char current))
+                    (string (iter (for c in-string char)
+                              (vector-push-extend c current)))))
                 (finish-item ()
                   ;; trim off unquoted whitespace at the end
                   (when (and (eql state :collecting)
@@ -325,7 +286,7 @@ always-quote: Defaults to *always-quote*"
                   (handler-case
                       ;; reset index, line and len for the next line of data
                       (setf i -1   ;; we will increment immediately after this
-                            line (read-line in-stream)
+                            line (read-until in-stream *read-newline*)
                             llen (length line))
                     (end-of-file (sig)
                       (ecase state
@@ -343,7 +304,7 @@ always-quote: Defaults to *always-quote*"
             (case state
               ;; in a quoted string that contains new-lines
               (:collecting-quoted
-               (store-char #\newline)
+               (store-char *read-newline*)
                (read-line-in))
               (t (finish-item) (return items))))
 
@@ -456,7 +417,8 @@ always-quote: Defaults to *always-quote*"
                         ((:quoted-empty-string-is-nil *quoted-empty-string-is-nil*)
                          *quoted-empty-string-is-nil*)
                         ((:trim-outer-whitespace *trim-outer-whitespace*)
-                         *trim-outer-whitespace*))
+                         *trim-outer-whitespace*)
+                        ((:newline *read-newline*) *read-newline*))
 
   (iter
     (for row in-csv stream-or-string skipping-header skip-first-p)
@@ -478,7 +440,8 @@ always-quote: Defaults to *always-quote*"
                  ((:quoted-empty-string-is-nil *quoted-empty-string-is-nil*)
                   *quoted-empty-string-is-nil*)
                  ((:trim-outer-whitespace *trim-outer-whitespace*)
-                  *trim-outer-whitespace*))
+                  *trim-outer-whitespace*)
+                 ((:newline *read-newline*) *read-newline*))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
 

@@ -3,6 +3,12 @@
 
 (in-package :cl-csv-test.speed-tests)
 
+(defun run-speed-tests ()
+  (lisp-unit2:run-tests
+   :package :cl-csv-test.speed-tests
+   :name :cl-csv-speed-tests
+   :run-contexts #'lisp-unit2:with-summary-context))
+
 (defun log-time (&optional (time (get-universal-time)) stream)
   "returns a date as ${mon}/${d}/${y} ${h}:${min}:{s}, defaults to get-universal-time"
   (multiple-value-bind ( s min h  )

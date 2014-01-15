@@ -4,6 +4,12 @@
 (in-package :cl-csv-test)
 (cl-interpol:enable-interpol-syntax)
 
+(defun run-all-tests ()
+  (run-tests
+   :package :cl-csv-test
+   :name :cl-csv
+   :run-contexts #'with-summary-context ))
+
 (defmacro assert-length (exp it &rest them)
   `(assert-eql ,exp (length ,it) ,@them))
 
