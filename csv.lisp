@@ -230,8 +230,12 @@ always-quote: Defaults to *always-quote*"
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     line llen (c #\null)
-     (elen (length *quote-escape*)))
+     (line (make-array *buffer-size* :element-type 'character ))
+     (llen -1)
+     (c #\null)
+     (elen (length *quote-escape*))
+     buffer-ends-in-newline?
+     items items-tail)
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -246,8 +250,8 @@ always-quote: Defaults to *always-quote*"
   ;; this just ensures that a file opened here is closed here
   (with-csv-input-stream (in-stream stream-or-string)
     (csv-row-read
-     (iter
-       (for i upfrom 0)
+     (loop for i from 0
+       do
        (when (and line (< i llen))
          (setf c (elt line i)))
        (labels ((current-last-char ()
@@ -265,17 +269,23 @@ always-quote: Defaults to *always-quote*"
                       (decf (fill-pointer current))))
 
                   ;; collect the result
-                  (if (and
-                       ;; got a zero length string?
-                       (zerop (length (string current)))
-                       ;; should we collect nil for zero length strings?
-                       (or (and (member state '(:waiting))
-                                *unquoted-empty-string-is-nil*)
-                           (and (member state '(:waiting-for-next))
-                                *quoted-empty-string-is-nil*)))
-                      (collect (csv-data-read nil) into items)
-                      (collect (csv-data-read
-                                (copy-seq (string current))) into items))
+                  (let ((v (cons
+                            (if (and
+                                 ;; got a zero length string?
+                                 (zerop (length (string current)))
+                                 ;; should we collect nil for zero length strings?
+                                 (or (and (member state '(:waiting))
+                                          *unquoted-empty-string-is-nil*)
+                                     (and (member state '(:waiting-for-next))
+                                          *quoted-empty-string-is-nil*)))
+                                (csv-data-read nil)
+                                (csv-data-read (copy-seq (string current))))
+                            nil)))
+                    (if items
+                        (setf (cdr items-tail) v
+                              items-tail v)
+                        (setf items v
+                              items-tail v)))
                   ;; go back to waiting for items
                   (setf state :waiting)
                   (setf (fill-pointer current) 0))
@@ -283,30 +293,36 @@ always-quote: Defaults to *always-quote*"
                   ;; we just read the first escape char
                   (incf i (- (length *quote-escape*) 1)))
                 (read-line-in ()
-                  (handler-case
-                      ;; reset index, line and len for the next line of data
-                      (setf i -1   ;; we will increment immediately after this
-                            line (read-until in-stream *read-newline*)
-                            llen (length line))
-                    (end-of-file (sig)
-                      (ecase state
-                        (:waiting (error sig))
-                        (:waiting-for-next (return items))
-                        (:collecting (finish-item) (return items))
-                        (:collecting-quoted (csv-parse-error sig)))
-                      ))))
+                  (handler-bind
+                      ((end-of-file
+                         (lambda (c)
+                           (ecase state
+                             (:waiting ;; re-raise
+                              (when items
+                                (finish-item)
+                                (return items)))
+                             (:waiting-for-next (return items))
+                             (:collecting (finish-item) (return items))
+                             (:collecting-quoted (csv-parse-error c))))))
+                    ;; reset index, line and len for the next line of data
+                    (setf i -1)    ;; we will increment immediately after this
+                    (multiple-value-setq
+                        (llen buffer-ends-in-newline?)
+                      (read-into-buffer-until line in-stream *read-newline*)))))
          (cond
            ;; if we dont have a line yet read one
-           ((null line) (read-line-in))
+           ((minusp llen) (read-line-in))
 
-           ;; we made it to the end of our line
-           ((= i llen)                  ;; end of line
-            (case state
-              ;; in a quoted string that contains new-lines
-              (:collecting-quoted
-               (store-char *read-newline*)
-               (read-line-in))
-              (t (finish-item) (return items))))
+           ;; we made it to the end of our buffer, so start again
+           ((= i llen)
+            (cond ((and (eql state :collecting-quoted)
+                        buffer-ends-in-newline?)
+                   (store-char *read-newline*)
+                   (read-line-in))
+                  (buffer-ends-in-newline?
+                   (finish-item)
+                   (return items))
+                  (T (read-line-in))))
 
            ;; the next characters are an escape sequence, start skipping
            ((and (or (eql state :collecting-quoted)

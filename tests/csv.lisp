@@ -302,6 +302,12 @@ multiline" (nth 3 (first data)) ))
                        (lambda (c) (invoke-restart 'filter (mapcar #'parse-integer (cl-csv::row c))))))
         (cl-csv:read-csv-row "1,2,3")))))
 
+(defun displaced-sub-string (s &key (start 0) (end (length s)))
+  (make-array (- end start)
+              :element-type (array-element-type s)
+              :displaced-to s
+              :displaced-index-offset start))
+
 (define-test csv-continue-signals (:tags '(signals))
   (handler-bind ((csv-parse-error #'continue))
     (assert-equal
@@ -310,3 +316,34 @@ multiline" (nth 3 (first data)) ))
      (cl-csv:read-csv "1,2,3
 2,3',4
 3,4,5" :quote #\'))))
+
+(define-test read-into-buffer-until-test (:tags '(read-until))
+  ;; \r\l newline
+  (with-input-from-string (in #?"test this\r\n thing")
+    (let* ((s (make-string 80))
+           (l (cl-csv::read-into-buffer-until s in #?"\r\n")))
+      (assert-eql 9 l)
+      (assert-equal "test this" (displaced-sub-string s :end l))))
+  ;; newline
+  (with-input-from-string (in #?"t\nest this\n thing")
+    (let* ((s (make-string 80))
+          (l (cl-csv::read-into-buffer-until s in #\newline)))
+      (assert-eql 1 l)
+      (assert-equal "t" (displaced-sub-string s :end l))
+      (let ((l (cl-csv::read-into-buffer-until s in #\newline)))
+        (assert-eql 8 l)
+        (assert-equal "est this" (displaced-sub-string s :end l)))))
+  ;; EOF
+  (with-input-from-string (in #?"test this thing")
+    (let* ((s (make-string 80))
+          (l (cl-csv::read-into-buffer-until s in #\newline)))
+      (assert-eql (length "test this thing") l)
+      (assert-equal "test this thing" (displaced-sub-string s :end l))
+      ))
+  ;; filled buffer
+  (with-input-from-string (in #?"test this thing")
+    (let* ((s (make-string 4))
+          (l (cl-csv::read-into-buffer-until s in #\newline)))
+      (assert-eql 4 l)
+      (assert-equal "test" (displaced-sub-string s :end l))
+      )))

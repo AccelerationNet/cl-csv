@@ -33,3 +33,5 @@
   "Should the reading and writing process enable filtering signals")
 
 (defvar *eof-char* #\null "The char we use for eof")
+
+(defvar *buffer-size* 512)
