@@ -66,11 +66,14 @@
     cnt))
 
 (define-test read-by-line-and-buffer ()
-  (let ((cnt 0) (cnt2 0))
+  (let ((cnt 0) (cnt2 0) (cnt3 0))
     (time-and-log-around (test-log "read large file by lines")
-      (cl-csv::with-csv-input-stream (s +test-big-file+ )
-        (iter (for line in-stream s using #'read-line )
-          (incf cnt))))
+      (let ( line)
+        (cl-csv::with-csv-input-stream (s +test-big-file+ )
+          (handler-case
+              (loop while (setf line (read-line s))
+                    do (incf cnt))
+            (end-of-file (c) (declare (ignore c)))))))
 
     (time-and-log-around (test-log "read large file by buffer")
       (cl-csv::with-csv-input-stream (s +test-big-file+ )
@@ -83,7 +86,16 @@
           (while (= 80 fill))
           )))
 
-    (values cnt cnt2)))
+    (time-and-log-around (test-log "read large file by read-into-buffer-until")
+      (cl-csv::with-csv-input-stream (s +test-big-file+ )
+        (let ((buffer (make-string cl-csv::*buffer-size*)))
+          (handler-case
+              (loop
+                while (plusp (cl-csv::read-into-buffer-until buffer s))
+                do (incf cnt3))
+            (end-of-file (c) (declare (ignore c)))))))
+
+    (values cnt cnt2 cnt3)))
 
 (define-test collect-big-file-csv-rows ()
   (time-and-log-around (test-log "read large file test")
