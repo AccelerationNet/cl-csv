@@ -95,7 +95,9 @@
                 do (incf cnt3))
             (end-of-file (c) (declare (ignore c)))))))
 
-    (values cnt cnt2 cnt3)))
+    (format lisp-unit2:*test-stream*
+            "~@:_ lines:~D , buffers:~D, buffered-lines:~D~@:_"
+            cnt cnt2 cnt3)))
 
 (define-test collect-big-file-csv-rows ()
   (time-and-log-around (test-log "read large file test")
