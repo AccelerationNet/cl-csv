@@ -48,9 +48,13 @@
 
 #+sbcl ;; copied and mutated from sb-impl::ansi-stream-read-line-from-frc-buffer
 (defun %fast-read-into-buffer-until (buffer stream &optional (nl #\newline))
+  (declare
+   (optimize (speed 3) (safety 0) (debug 0))
+   (type (simple-array character) buffer))
   (sb-int:prepare-for-fast-read-char stream
     (declare (ignore sb-impl::%frc-method%))
     (let ((b-len (length buffer)) (b-idx 0))
+      (declare (type fixnum b-len b-idx))
       (labels ((refill-buffer ()
                  (prog1
                      (sb-int:fast-read-char-refill stream nil nil)
