@@ -304,3 +304,23 @@ multiline" (nth 3 (first data)) ))
      (cl-csv:read-csv "1,2,3
 2,3',4
 3,4,5" :quote #\'))))
+
+(define-test early-end-of-stream (:tags '(errors parsing))
+  (let ((line #?|"1","2|))
+    (assert-error
+     'cl-csv:csv-parse-error
+     (cl-csv:read-csv-row line)))
+  (let ((line ""))
+    (assert-error
+     'end-of-file
+     (cl-csv:read-csv-row line)))
+
+  (let ((line #?|"1","2|))
+    (assert-equal
+     '("1" "2")
+     (handler-bind ((cl-csv:csv-parse-error
+                      (lambda (c)
+                        (declare (ignore c))
+                        (invoke-restart 'cl-csv::finish-item))))
+       (cl-csv:read-csv-row line))))
+  )
