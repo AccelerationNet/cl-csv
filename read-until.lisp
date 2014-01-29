@@ -62,9 +62,10 @@
                          (sb-kernel:ansi-stream-in-index sb-impl::%frc-stream%))))
                (newline-position ()
                  (etypecase nl
-                   (string (search nl (the (simple-array character (*))
-                                           sb-impl::%frc-buffer%)
-                                   :test #'char= :start2 sb-impl::%frc-index%))
+                   (simple-string (search nl
+                                          (the (simple-array character (*))
+                                               sb-impl::%frc-buffer%)
+                                          :test #'char= :start2 sb-impl::%frc-index%))
                    (character (position nl (the (simple-array character (*))
                                                 sb-impl::%frc-buffer%)
                                         :test #'char=
@@ -79,7 +80,7 @@
                  (return-from %fast-read-into-buffer-until
                    (values (+ 1 b-idx) nl? )))
 
-               (return-full-buffer (&aux (remaining (- b-len b-idx))
+               (return-full-buffer (&aux (remaining (the fixnum (- b-len b-idx)))
                                     (end (+ sb-impl::%frc-index% remaining))
                                     (end-l (1+ end)))
                  
