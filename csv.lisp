@@ -12,11 +12,12 @@
 (define-condition csv-parse-error (error)
   ((format-control :accessor format-control :initarg :format-control :initform nil)
    (format-args :accessor format-args :initarg :format-args :initform nil))
-  (:report (lambda (c s)
-	     (apply #'format
-	      s
-	      (format-control c)
-	      (format-args c)))))
+  (:report (lambda (c s &aux (ctrl (format-control c)))
+	     (typecase ctrl
+               (condition
+                (format s "CSV-PARSE-ERROR: internal-error ~A" ctrl))
+               (string
+                (apply #'format s ctrl (format-args c)))))))
 
 (defun csv-parse-error (msg &rest args)
   (error 'csv-parse-error :format-control msg :format-args args))
@@ -295,15 +296,27 @@ always-quote: Defaults to *always-quote*"
                 (read-line-in ()
                   (handler-bind
                       ((end-of-file
-                         (lambda (c)
+                         (lambda (sig)
                            (ecase state
-                             (:waiting ;; re-raise
+                             (:waiting
+                              ;; let the signal go through, we have not read anything and already EOF
                               (when items
                                 (finish-item)
-                                (return items)))
-                             (:waiting-for-next (return items))
-                             (:collecting (finish-item) (return items))
-                             (:collecting-quoted (csv-parse-error c))))))
+                                (return items))
+                              )
+                             (:waiting-for-next
+                              ;; finished reading before encountering the next separator
+                              (return items))
+                             (:collecting
+                              ;; finished reading the file so must have finished this item
+                              (finish-item)
+                              (return items))
+                             (:collecting-quoted
+                              (restart-case (csv-parse-error "End of file while collecting quoted item: ~A" sig)
+                                (finish-item ()
+                                  (finish-item)
+                                  (return items))))))
+                         ))
                     ;; reset index, line and len for the next line of data
                     (setf i -1)    ;; we will increment immediately after this
                     (multiple-value-setq

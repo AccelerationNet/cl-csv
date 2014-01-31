@@ -317,6 +317,26 @@ multiline" (nth 3 (first data)) ))
 2,3',4
 3,4,5" :quote #\'))))
 
+(define-test early-end-of-stream (:tags '(errors parsing))
+  (let ((line #?|"1","2|))
+    (assert-error
+     'cl-csv:csv-parse-error
+     (cl-csv:read-csv-row line)))
+  (let ((line ""))
+    (assert-error
+     'end-of-file
+     (cl-csv:read-csv-row line)))
+
+  (let ((line #?|"1","2|))
+    (assert-equal
+     '("1" "2")
+     (handler-bind ((cl-csv:csv-parse-error
+                      (lambda (c)
+                        (declare (ignore c))
+                        (invoke-restart 'cl-csv::finish-item))))
+       (cl-csv:read-csv-row line))))
+  )
+
 (define-test read-into-buffer-until-test (:tags '(read-until))
   ;; \r\l newline
   (with-input-from-string (in #?"test this\r\n thing")
@@ -386,3 +406,4 @@ multiline" (nth 3 (first data)) ))
       (assert-eql 3 (cl-csv::read-into-buffer-until s in #\newline))
       (assert-error 'end-of-file (cl-csv::read-into-buffer-until s in #\newline))
       )))
+
