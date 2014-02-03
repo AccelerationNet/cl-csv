@@ -231,12 +231,23 @@ always-quote: Defaults to *always-quote*"
      &aux
      (current (make-array 20 :element-type 'character :adjustable t :fill-pointer 0))
      (state :waiting)
-     (line (make-array *buffer-size* :element-type 'character ))
-     (llen -1)
      (c #\null)
      (elen (length *quote-escape*))
      buffer-ends-in-newline?
-     items items-tail)
+     items items-tail
+     (partial-newline-match-index -1)
+     (nl-len (etypecase *read-newline*
+               (string (length *read-newline*))
+               (character 1)))
+     (nl-len-1 (- nl-len 1))
+     (use-read-line? (etypecase *read-newline*
+                       (character (char= *read-newline* #\newline))
+                       (string (char= (schar *read-newline* 0)))
+                          ))
+     newline-matched?
+     (line (unless use-read-line?
+             (make-array *buffer-size* :element-type 'character )))
+     (llen -1))
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -254,7 +265,20 @@ always-quote: Defaults to *always-quote*"
      (loop for i from 0
        do
        (when (and line (< i llen))
-         (setf c (elt line i)))
+         (setf c (schar line i))
+         ;; look for newlines
+         (setf newline-matched? (= nl-len-1 partial-newline-match-index))
+         (unless newline-matched?
+           (let ((new-idx (+ 1 partial-newline-match-index)))
+             (declare (type fixnum new-idx))
+             (if (char= (etypecase *read-newline*
+                          (string (schar *read-newline* new-idx))
+                          (character *read-newline*))
+                        c)
+                 (setf partial-newline-match-index new-idx)
+                 (setf partial-newline-match-index -1))
+             (setf newline-matched? (= nl-len-1 partial-newline-match-index)))))
+
        (labels ((current-last-char ()
                   (elt current (- (fill-pointer current) 1)))
                 (store-char (char)
@@ -263,6 +287,8 @@ always-quote: Defaults to *always-quote*"
                     (string (iter (for c in-string char)
                               (vector-push-extend c current)))))
                 (finish-item ()
+                  (when newline-matched?
+                    (decf (fill-pointer current) nl-len))
                   ;; trim off unquoted whitespace at the end
                   (when (and (eql state :collecting)
                              *trim-outer-whitespace*)
@@ -319,9 +345,21 @@ always-quote: Defaults to *always-quote*"
                          ))
                     ;; reset index, line and len for the next line of data
                     (setf i -1)    ;; we will increment immediately after this
-                    (multiple-value-setq
-                        (llen buffer-ends-in-newline?)
-                      (read-into-buffer-until line in-stream *read-newline*)))))
+                    
+                    (if use-read-line?
+                        (multiple-value-bind (line-in didnt-get-newline)
+                            (read-line in-stream)
+                          (setf line line-in
+                                llen (length line)
+                                buffer-ends-in-newline? (not didnt-get-newline)))
+                        (multiple-value-setq
+                            (llen buffer-ends-in-newline? partial-newline-match-index )
+                          (read-into-buffer-until
+                           line in-stream
+                           :nl *read-newline*
+                           :partial-newline-match-index partial-newline-match-index)))
+                    ;(adwutils:spy-break llen buffer-ends-in-newline? partial-newline-match-index line)
+                    )))
          (cond
            ;; if we dont have a line yet read one
            ((minusp llen) (read-line-in))
@@ -364,19 +402,28 @@ always-quote: Defaults to *always-quote*"
               (:collecting
                (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
                                 i line))))
-           (t
+
+           ;; our readline implementation left us a new line in the buffer
+           (newline-matched?
+            (ecase state
+              (:collecting-quoted (store-char c))
+              ((:waiting :collecting :waiting-for-next)
+               (finish-item)
+               (return items))))
+
+           (t ;; regular character
             (ecase state
               (:waiting
                (unless (and *trim-outer-whitespace* (white-space? c))
                  (setf state :collecting)
-                 (vector-push-extend c current)))
+                 (store-char c)))
               (:waiting-for-next
                (unless (and *trim-outer-whitespace* (white-space? c))
                  (csv-parse-error
                   "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
                   i line)))
               ((:collecting :collecting-quoted)
-               (vector-push-extend c current))))
+               (store-char c))))
            ))))))
 
 (iterate:defmacro-clause (FOR var IN-CSV input
