@@ -66,7 +66,7 @@
     cnt))
 
 (define-test read-by-line-and-buffer (:tags '(cl-csv-test::read-until))
-  (let ((cnt 0) (cnt2 0) (cnt3 0) (cnt4 0))
+  (let ((cnt 0) (cnt2 0) (cnt3 0))
     (time-and-log-around (test-log "read large file by lines")
       (let ( line)
         (cl-csv::with-csv-input-stream (s +test-big-file+ )
@@ -93,15 +93,6 @@
               (loop
                 while (plusp (cl-csv::read-into-buffer-until buffer s))
                 do (incf cnt3))
-            (end-of-file (c) (declare (ignore c)))))))
-
-    (time-and-log-around (test-log "read large file by fast-read-into-buffer-until")
-      (cl-csv::with-csv-input-stream (s +test-big-file+ )
-        (let ((buffer (make-string cl-csv::*buffer-size*)))
-          (handler-case
-              (loop
-                while (plusp (cl-csv::fast-read-into-buffer-until buffer s))
-                do (incf cnt4))
             (end-of-file (c) (declare (ignore c)))))))
 
     (format lisp-unit2:*test-stream*
