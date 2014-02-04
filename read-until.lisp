@@ -36,5 +36,5 @@
     ;; got the nl
     (when (= nl-len-1 nl-idx)
       (return-from read-into-buffer-until
-        (values (+ 1 i) t nl-idx))))
+        (values (+ 1 i) t -1))))
   (values buffer-len nil nl-idx))
