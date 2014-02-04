@@ -244,9 +244,8 @@ always-quote: Defaults to *always-quote*"
      (state :waiting)
      (c #\null)
      (elen (length *quote-escape*))
-     buffer-ends-in-newline?
      items items-tail
-     (partial-newline-match-index -1)
+     (nl-match -1)
      (nl-len (etypecase *read-newline*
                (string (length *read-newline*))
                (character 1)))
@@ -257,7 +256,8 @@ always-quote: Defaults to *always-quote*"
      newline-matched?
      (line (unless use-read-line?
              (make-array *buffer-size* :element-type 'character )))
-     (llen -1))
+     (llen -1)
+     read-line-got-a-newline?)
   "Read in a CSV by data-row (which due to quoted newlines may be more than one
                               line from the stream)
   "
@@ -276,22 +276,16 @@ always-quote: Defaults to *always-quote*"
            do
               (when (and line (< i llen))
                 (setf c (schar line i))
-                (setf newline-matched?
-                      (= nl-len-1 partial-newline-match-index))
-                '(adwutils::spy-break-s
-                 use-read-line?
-                 current nl-len-1 partial-newline-match-index c newline-matched?)
-                (unless newline-matched?
-                  (let ((new-idx (+ 1 partial-newline-match-index)))
-                    (declare (type fixnum new-idx))
-                    (if (char= (etypecase *read-newline*
-                                 (string (schar *read-newline* new-idx))
-                                 (character *read-newline*))
-                               c)
-                        (setf partial-newline-match-index new-idx)
-                        (setf partial-newline-match-index -1))
-                    (setf newline-matched?
-                          (= nl-len-1 partial-newline-match-index)))))
+                (let ((new-idx (+ 1 nl-match)))
+                  (declare (type fixnum new-idx))
+                  (if (char= (etypecase *read-newline*
+                               (string (schar *read-newline* new-idx))
+                               (character *read-newline*))
+                             c)
+                      (setf nl-match new-idx)
+                      (setf nl-match -1))
+                  (setf newline-matched?
+                        (= nl-len-1 nl-match))))
 
               (labels ((current-last-char ()
                          (elt current (- (fill-pointer current) 1)))
@@ -303,11 +297,8 @@ always-quote: Defaults to *always-quote*"
                                      (vector-push-extend c current)))))
 
                        (finish-item ()
-                         (when newline-matched?
-                           (decf (fill-pointer current) nl-len-1))
                          ;; trim off unquoted whitespace at the end
-                         (when (and (eql state :collecting)
-                                    *trim-outer-whitespace*)
+                         (when (and (eql state :collecting) *trim-outer-whitespace*)
                            (iter (while (white-space? (current-last-char)))
                              (decf (fill-pointer current))))
 
@@ -365,87 +356,77 @@ always-quote: Defaults to *always-quote*"
                            (setf i -1) ;; we will increment immediately after this
 
                            (if use-read-line?
-                               (multiple-value-bind (line-in didnt-get-newline)
+                               (multiple-value-bind (line-in didnt-get-a-newline?)
                                    (read-line in-stream)
                                  (setf line line-in
-                                       llen (length line)
-                                       buffer-ends-in-newline? (not didnt-get-newline)))
-                               (multiple-value-setq
-                                   (llen buffer-ends-in-newline? partial-newline-match-index )
-                                 (read-into-buffer-until
-                                  line in-stream
-                                  :nl *read-newline*
-                                  :partial-newline-match-index partial-newline-match-index))))))
+                                       read-line-got-a-newline? (not didnt-get-a-newline?)
+                                       llen (length line)))
+                               (setf llen
+                                     (read-into-buffer-until
+                                      line in-stream
+                                      :nl *read-newline*
+                                      :nl-match nl-match))))))
 
-         (cond
-           ;; if we dont have a line yet read one
-           ((minusp llen) (read-line-in))
+                (cond
+                  ;; if we dont have a line yet read one
+                  ((minusp llen) (read-line-in))
 
-           ;; we made it to the end of our buffer, so start again
-           ((= i llen)
-            (cond ((and (eql state :collecting-quoted)
-                        buffer-ends-in-newline?)
-                   (store-char *read-newline*)
+                  ;; we made it to the end of our buffer, so start again
+                  ((= i llen)
+                   (ecase state
+                     (:collecting-quoted
+                      (when use-read-line?
+                        (when read-line-got-a-newline?
+                          (store-char *read-newline*))))
+                     ((:waiting :collecting :waiting-for-next)
+                      (when newline-matched?
+                        (decf (fill-pointer current) nl-len))
+                      (when (or newline-matched? use-read-line?)
+                        (finish-item)
+                        (return items))))
                    (read-line-in))
-                  (buffer-ends-in-newline?
-                   ;; in this case we had a new line that split our input buffer and
-                   ;; we already stored both characters
-                   (unless use-read-line?
-                     (decf (fill-pointer current) nl-len))
-                   (finish-item)
-                   (return items))
-                  (T (read-line-in))))
 
-           ;; the next characters are an escape sequence, start skipping
-           ((and (or (eql state :collecting-quoted)
-                     (eql state :collecting))
-                 *quote-escape*         ;; if this is null there is no escape
-                 (%escape-seq? line i *quote-escape* llen elen))
-            (store-char *quote*)
-            (skip-escape))
+                  ;; the next characters are an escape sequence, start skipping
+                  ((and (or (member state '(:collecting :collecting-quoted)))
+                        *quote-escape*  ;; if this is null there is no escape
+                        (%escape-seq? line i *quote-escape* llen elen))
+                   (store-char *quote*)
+                   (skip-escape))
 
-           ;; the character is data separator, so gather the word unless
-           ;; it is quoted data
-           ((char= *separator* c)
-            (ecase state
-              (:collecting-quoted (store-char c))
-              ((:collecting :waiting :waiting-for-next)
-               (finish-item))))
+                  ;; the character is data separator, so gather the word unless
+                  ;; it is quoted data
+                  ((char= *separator* c)
+                   (ecase state
+                     (:collecting-quoted (store-char c))
+                     ((:collecting :waiting :waiting-for-next)
+                      (finish-item))))
 
-           ;; the character is a quote (and not an escape) so start an item
-           ;; finishing the item is the responsibility of separator/eol
-           ((and *quote* (char= *quote* c))
-            (ecase state
-              (:waiting (setf state :collecting-quoted))
-              (:collecting-quoted
-               ;; if we end up trying to read
-               (setf state :waiting-for-next))
-              (:collecting
-               (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
-                                i line))))
+                  ;; the character is a quote (and not an escape) so start an item
+                  ;; finishing the item is the responsibility of separator/eol
+                  ((and *quote* (char= *quote* c))
+                   (ecase state
+                     (:waiting (setf state :collecting-quoted))
+                     (:collecting-quoted
+                      ;; if we end up trying to read
+                      (setf state :waiting-for-next))
+                     (:collecting
+                      (csv-parse-error "we are reading non quoted csv data and found a quote at ~D~%~A"
+                                       i line))))
 
-           ;; our readline implementation left us a new line in the buffer
-           (newline-matched?
-            (ecase state
-              (:collecting-quoted (store-char c))
-              ((:waiting :collecting :waiting-for-next)
-               (finish-item)
-               (return items))))
-
-           (t ;; regular character
-            (ecase state
-              (:waiting
-               (unless (and *trim-outer-whitespace* (white-space? c))
-                 (setf state :collecting)
-                 (store-char c)))
-              (:waiting-for-next
-               (unless (and *trim-outer-whitespace* (white-space? c))
-                 (csv-parse-error
-                  "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
-                  i line)))
-              ((:collecting :collecting-quoted)
-               (store-char c))))
-           ))))))
+                  (t                    ;; regular character
+                   (ecase state
+                     (:waiting
+                      (unless (and *trim-outer-whitespace* (white-space? c))
+                        (setf state :collecting)
+                        (store-char c)))
+                     (:waiting-for-next
+                      (unless (and *trim-outer-whitespace* (white-space? c))
+                        (csv-parse-error
+                         "We finished reading a quoted value and got more characters before a separator or EOL ~D~%~A"
+                         i line)))
+                     ((:collecting :collecting-quoted)
+                      (store-char c))))
+                  ))))))
 
 (iterate:defmacro-clause (FOR var IN-CSV input
                               &optional SKIPPING-HEADER skip-first-p

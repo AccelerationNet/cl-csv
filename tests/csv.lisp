@@ -372,60 +372,48 @@ multiline" (nth 3 (first data)) ))
       (assert-error 'end-of-file (cl-csv::read-into-buffer-until s in :nl #\newline))
       )))
 
-(define-test buffer-spanning-new-lines (:tags '(read-until))
-  ;; \r\l newline
-  (alexandria:with-input-from-file
-      (in
-       (asdf:system-relative-pathname :cl-csv "tests/line-endings.csv"))
-    (let* ((s (make-string 5)))
-      (multiple-value-bind (len nl? nl-idx)
-          (cl-csv::read-into-buffer-until s in :nl #?"\r\n")
-        (assert-eql 5 len )
-        (assert-false nl? )
-        (assert-eql 0 nl-idx)
-        (multiple-value-bind (len2 nl2? nl-idx2)
-            (cl-csv::read-into-buffer-until s in :nl #?"\r\n"
-                     :partial-newline-match-index nl-idx)
-          (assert-eql 1 len2 )
-          (assert-true nl2? )
-          (assert-eql -1 nl-idx2 ))
-        (multiple-value-bind (len2 nl2? nl-idx2)
-            (cl-csv::read-into-buffer-until s in :nl #?"\r\n")
-          (assert-eql 4 len2 )
-          (assert-false nl2? )
-          (assert-eql -1 nl-idx2 ))
-        ))))
+(define-test buffer-spanning-new-lines
+    (:tags '(read-until whitespace parsing))
+  (with-input-from-string (in "testRNtest")
+    (let* ((s (make-string 5))
+           len)
+      (setf len
+            (cl-csv::read-into-buffer-until s in :nl "RN"))
+      (assert-eql 5 len)
+      (setf len
+            (cl-csv::read-into-buffer-until
+             s in :nl "RN"
+             :nl-match 0))
+      (assert-eql 1 len )
+      (setf len
+            (cl-csv::read-into-buffer-until s in :nl "RN"))
+      (assert-eql 4 len))))
 
-(define-test buffer-spanning-new-lines2 (:tags '(read-until newlines))
+(define-test buffer-spanning-new-lines2
+    (:tags '(read-until newlines whitespace parsing))
   ;; ** newline
   (with-input-from-string (in "test**tes**te**test")
     (let* ((s (make-string 5))
-           len nl? (nl-idx -1))
-      (flet ((rebind ()
+           len (nl-idx -1))
+      (flet ((rebind ( &optional new-nl-idx)
+               (when new-nl-idx
+                 (setf nl-idx new-nl-idx))
                (multiple-value-setq
-                   (len nl? nl-idx)
+                   (len)
                  (cl-csv::read-into-buffer-until
                   s in :nl "**"
-                  :partial-newline-match-index nl-idx))))
+                  :nl-match nl-idx))))
         (rebind)
         (assert-eql 5 len :first s)
-        (assert-false nl? :first s)
-        (assert-eql 0 nl-idx :first s)
-        (rebind)
+        (rebind 0)
         (assert-eql 1 len :second)
-        (assert-true nl?)
-        (assert-eql -1 nl-idx)
-        (rebind)
+        (rebind -1)
         (assert-eql 5 len :third)
-        (assert-true nl? )
-        (assert-eql -1 nl-idx )
         (rebind)
-        (assert-eql 4 len :third)
-        (assert-true nl? )
-        (assert-eql -1 nl-idx ))
+        (assert-eql 4 len :third))
       )))
 
-(define-test different-newlines (:tags '(read-until newlines))
+(define-test different-newlines (:tags '(read-until newlines whitespace parsing))
   (with-input-from-string (in "a|b|c|d**1|2|3|4")
     (let* ((cl-csv::*buffer-size* 8)
            (rows (cl-csv:read-csv in :newline "**" :separator "|")))
@@ -451,4 +439,6 @@ multiline" (nth 3 (first data)) ))
       (assert-equal '("a" "b" "c" "d") (first rows))
       (assert-equal '("1" "2" "3" "4") (second rows)))
     ))
+
+
 
