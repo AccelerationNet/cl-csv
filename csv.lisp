@@ -428,12 +428,12 @@ always-quote: Defaults to *always-quote*"
                       (store-char c))))
                   ))))))
 
-(iterate:defmacro-clause (FOR var IN-CSV input
-                              &optional SKIPPING-HEADER skip-first-p
-                              SEPARATOR separator
-                              QUOTE quote
-                              ESCAPED-QUOTE escaped-quote)
-  "IN-CSV driver for iterate"
+(iterate:defmacro-clause (for var in-csv input
+                              &optional skipping-header skip-first-p
+                              separator separator
+                              quote quote
+                              escaped-quote escaped-quote)
+  "in-csv driver for iterate"
   (alexandria:with-unique-names (stream opened? skip)
     `(progn
       (with ,skip = ,skip-first-p)
@@ -453,14 +453,14 @@ always-quote: Defaults to *always-quote*"
             (for ,var =
                  (restart-case (read-csv-row ,stream)
                    (continue ()
-                     :report "Skip reading this row and try again on the next"
+                     :report "skip reading this row and try again on the next"
                      (next-iteration))
                    (filter (new-row)
-                     :report "Supply a different row to use instead of this erroring csv-row"
+                     :report "supply a different row to use instead of this erroring csv-row"
                      new-row))))
         (end-of-file () (finish))))))
 
-(iterate:defmacro-clause (SAMPLING expr &optional INTO var SIZE size)
+(iterate:defmacro-clause (sampling expr &optional into var size size)
   "resevoir sample the input"
   (let ((sample (or var iterate::*result-var*)))
     (alexandria:with-unique-names (i sample-size sigil buffer row)

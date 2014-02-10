@@ -32,7 +32,7 @@ figured why not just release it anyway.
    restart available which will cause the filter value to be used
    instead.  Enabling signals is ~2xs as slow as not, so by default
    they are not enabled.
- * in-csv iterate clause and read-csv support continue and `filter`
+ * `in-csv` iterate clause and `read-csv` support `continue` and `filter`
    restarts for errors occuring during read-csv-row
 
 
