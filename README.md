@@ -26,6 +26,12 @@ figured why not just release it anyway.
  * http://members.optusnet.com.au/apicard/csv-parser.lisp
  * http://www.cliki.net/fare-csv
 
+## Escaping and quotes
+
+There are two modes for escaping currently
+ * :quote - by default cl-csv treats `""` as an escape for a single double-quote
+ * :following - read the character after the escape sequence verbatim
+
 ## Signals and Restarts
  * `*enable-signals*` will cause a csv-data-read or csv-row-read to be
    signaled for each piece of data and row read.  There is a `filter`

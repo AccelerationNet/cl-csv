@@ -21,12 +21,14 @@
   (asdf:system-relative-pathname :cl-csv "tests/test-csv-unquoted-no-trailing.csv"))
 (defparameter +test-multiline+
   (asdf:system-relative-pathname :cl-csv "tests/test-multiline-data.csv"))
+(defparameter +test-backslash-escapes+
+  (asdf:system-relative-pathname :cl-csv "tests/test-backslash-escapes.csv"))
 
 (defparameter +test-files+
   (list
    +test-csv-quoted-path+
    +test-csv-unquoted-path+
-   +test-csv-unquoted-no-trailing-path+) )
+   +test-csv-unquoted-no-trailing-path+))
 
 (defparameter *test-csv1-rows*
   '(("first name" "last name" "job \"title\"" "number of hours" "id")
@@ -438,6 +440,17 @@ multiline" (nth 3 (first data)) ))
       (assert-equal 2 (length rows))
       (assert-equal '("a" "b" "c" "d") (first rows))
       (assert-equal '("1" "2" "3" "4") (second rows)))
+    ))
+
+(define-test backslash-escapes (:tags '(backslash escapes parsing))
+  (lisp-unit2:assert-error
+   'csv-parse-error
+   (cl-csv:read-csv +test-backslash-escapes+ :escape #?|\"|))
+  (let ((results (cl-csv:read-csv
+                  +test-backslash-escapes+
+                  :escape #\\ :escape-mode :following )))
+    (assert-equal 2 (length results))
+    (assert-equal `("id","timestamp","date","comment","something") (first results))
     ))
 
 
