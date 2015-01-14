@@ -453,5 +453,33 @@ multiline" (nth 3 (first data)) ))
     (assert-equal `("id","timestamp","date","comment","something") (first results))
     ))
 
+(defparameter +test-csv-bug18-path+
+  (asdf:system-relative-pathname :cl-csv "tests/bug18.csv"))
+
+(define-test issue-18 (:tags '(parsing bugs whitespace empty-line))  
+  (let* ((results (cl-csv:read-csv-row
+                   +test-csv-bug18-path+ :separator #\, :escape "\"\""))
+         (long-ml (nth 19 results)))
+    (assert-true results)
+    (assert-equal
+     "COPY (select t1.fspace, t3.fname, fad_target_classid, t2.name, num_client, num_client_big_imp, coverage 
+from 
+abc
+
+order by t1.fspace, t1.fad_target_classid) TO STDOUT DELIMITER ',' NULL 'null' CSV QUOTE '\"'"
+     long-ml)
+    (assert-equal
+     '("2014-11-07 10:02:17.302 CST" "gdt_new" "gdt_insight_new" "18445"
+       "10.136.165.93:39143" "545c1a19.480d" "1" "COPY"
+       "2014-11-07 09:02:17 CST" "6/1303255" "1197337058" "ERROR" "57014"
+       "canceling statement due to statement timeout" "" "" "" "" ""
+       "COPY (select t1.fspace, t3.fname, fad_target_classid, t2.name, num_client, num_client_big_imp, coverage 
+from 
+abc
+
+order by t1.fspace, t1.fad_target_classid) TO STDOUT DELIMITER ',' NULL 'null' CSV QUOTE '\"'"
+       "" "ProcessInterrupts, postgres.c:3314" "psql")
+     results)))
+
 
 
