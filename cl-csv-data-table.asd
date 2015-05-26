@@ -1,8 +1,9 @@
 
 (asdf:defsystem :cl-csv-data-table
+  :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for converting CSV data to data-tables"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0"
   :components ((:file "data-table"))
   :depends-on (:cl-csv :data-table))
 

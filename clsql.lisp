@@ -44,6 +44,13 @@
   (funcall log-fn "Starting import ~a" table-name)
   (let ((dt (or data-table (get-data-table-from-csv file t t sample-size)))
         (keys (copy-list keys)))
+    ;; we are putting this in a database, we cannot have empty column names
+    (setf
+     (data-table:column-names dt)
+     (iter
+       (with i = 0)
+       (for c in (data-table:column-names dt))
+       (collect (or c #?"anon_${ (incf i) }"))))
     (dolist (k '(:file :data-table :row-fn :sample-size :log-fn :log-frequency))
       (remf keys k))
     (funcall log-fn "CSV scanned for type information")

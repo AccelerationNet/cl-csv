@@ -8,9 +8,10 @@
 (in-package cl-csv.system)
 
 (defsystem :cl-csv
+  :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0"
   :components ((:file "packages")
                (:file "vars")
                (:file "read-until")
@@ -18,10 +19,11 @@
   :depends-on (:iterate :alexandria :cl-interpol))
 
 (defsystem :cl-csv-test
+  :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0"
   :components ((:module :tests
 			:serial t
 			:components ((:file "csv"))))

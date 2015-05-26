@@ -30,7 +30,8 @@ figured why not just release it anyway.
 
 There are two modes for escaping currently
  * :quote - by default cl-csv treats `""` as an escape for a single double-quote
- * :following - read the character after the escape sequence verbatim
+ * :following - read the character after the escape sequence verbatim, commonly 
+   the `*quote-escape*` will be set to `#\\` when the escape mode is following.
 
 ## Signals and Restarts
  * `*enable-signals*` will cause a csv-data-read or csv-row-read to be

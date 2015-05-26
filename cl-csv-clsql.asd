@@ -8,9 +8,10 @@
 (in-package cl-csv.system)
 
 (defsystem :cl-csv-clsql
+  :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files (and importing and exporting csvs from databases)"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0"
   :components ((:file "data-table")
                (:file "clsql"))
   :depends-on (:clsql-helper :cl-csv :data-table-clsql))
