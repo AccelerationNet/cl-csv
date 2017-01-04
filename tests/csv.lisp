@@ -483,3 +483,12 @@ order by t1.fspace, t1.fad_target_classid) TO STDOUT DELIMITER ',' NULL 'null' C
 
 
 
+(defparameter +test-tab-csv-issue-10+ "id	inches	name
+1	72\"	Russ Tyndall
+2	67\"	Amy Bobanolis
+")
+
+(define-test issue-10-tab-csv (:tags '(parsing bugs whitespace empty-line))
+  (let* ((csv (read-csv +test-tab-csv-issue-10+ :quote #\nul :separator #\tab))
+         (row1 (second csv)))
+    (assert-equal "72\"" (second row1) csv)))
