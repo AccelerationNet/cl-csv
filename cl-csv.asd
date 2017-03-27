@@ -12,6 +12,7 @@
   :description "Facilities for reading and writing CSV format files"
   :licence "BSD"
   :version "1.0"
+  :serial t
   :components ((:file "packages")
                (:file "vars")
                (:file "read-until")
