@@ -10,7 +10,7 @@
 (defsystem :cl-csv
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files"
-  :licence "BSD"
+  :license "BSD"
   :version "1.0"
   :serial t
   :components ((:file "packages")
@@ -23,7 +23,7 @@
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
-  :licence "BSD"
+  :license "BSD"
   :version "1.0"
   :components ((:module :tests
 			:serial t
