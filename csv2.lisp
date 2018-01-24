@@ -43,8 +43,8 @@
 (defclass csv-reader (read-dispatch-table)
   ((rows :initform
          (make-array 10
-                     :element-type '(vector string)
-                     :initial-element #()
+                     :element-type 'list
+                     :initial-element ()
                      :adjustable t :fill-pointer 0)
          :accessor rows :initarg rows)
    (line-data :initform
@@ -54,7 +54,8 @@
                           :adjustable t :fill-pointer 0)
               :accessor line-data)
    (reading-quoted? :initform () :accessor reading-quoted?)
-   (after-quoted?  :initform () :accessor after-quoted?)))
+   (after-quoted?  :initform () :accessor after-quoted?)
+   (row-fn :initform () :accessor row-fn :initarg :row-fn)))
 
 (defmethod reading-quoted (csv-reader c  &key table-entry)
   (declare (ignorable table-entry))
@@ -66,7 +67,8 @@
   (setf (reading-quoted? csv-reader)
         (not (reading-quoted? csv-reader)))
   (when (not (reading-quoted? csv-reader))
-    (setf (after-quoted? csv-reader) t)))
+    (setf (after-quoted? csv-reader) t))
+  t)
 
 (defun last-item (buff)
   (let ((idx (- (fill-pointer buff) 1)))
@@ -83,78 +85,100 @@
   (case *escape-mode*
     (:quote
      (cond
-       ((reading-quoted? csv-reader)
-        (vector-push-extend *quote* (buffer csv-reader))
-        ;; read an empty data item, let it ride
-        (setf (reading-quoted? csv-reader) nil)
-        (vector-push-extend "" (line-data csv-reader)))
+       ;; read an empty data item, let it ride
+       ((zerop (fill-pointer (buffer csv-reader)))
+        (setf (reading-quoted? csv-reader) nil
+              (after-quoted? csv-reader) t))
        (t
-        ;; roll back the most recent collection
-        ;; and put buffer back
-        (let ((s (last-item (line-data csv-reader))))
-          (setf (reading-quoted? csv-reader) t)
-          (setf (fill-pointer (buffer csv-reader))
-                (length s))
-          (vector-push-extend c (buffer csv-reader))
-          (decf (fill-pointer (line-data csv-reader)))))))
+        ;; we got an escape instead of an end quote
+        (setf (reading-quoted? csv-reader) t
+              (after-quoted? csv-reader) nil)
+        (vector-push-extend c (buffer csv-reader)))))
     (:following
      ;; replace the previous character with
      ;; the char escaped
-     (setf (last-item (buffer csv-reader)) c))))
+     (setf (last-item (buffer csv-reader)) c)
+     ))
+  t)
 
-(defun collect-line-data (csv-reader)
-  (when *trim-outer-whitespace*
+(defun collect-datum (csv-reader)
+  (when (and (not (after-quoted? csv-reader))
+             (not (reading-quoted? csv-reader))
+             *trim-outer-whitespace*)
     (iter
      (while (and (white-space? (last-item (buffer csv-reader)))
                  (plusp (fill-pointer (buffer csv-reader)))))
      (decf (fill-pointer (buffer csv-reader)))))
+
   (let ((d (copy-seq (string (buffer csv-reader)))))
+    (when (and (zerop (length d))
+               (or (and (after-quoted? csv-reader)
+                        *quoted-empty-string-is-nil*)
+                   (and (not (after-quoted? csv-reader))
+                        *unquoted-empty-string-is-nil*)))
+      (setf d nil))
     (csv-data-read d)
     (vector-push-extend d (line-data csv-reader)))
-  (setf (fill-pointer (buffer csv-reader))  0))
+  (setf (fill-pointer (buffer csv-reader)) 0
+        (reading-quoted? csv-reader) nil
+        (after-quoted? csv-reader) nil))
 
 (defun collect-row-data (csv-reader)
-  (collect-line-data csv-reader)
-  (let ((row (copy-seq (line-data csv-reader))))
+  (collect-datum csv-reader)
+
+  (let ((row (coerce (line-data csv-reader) 'list))
+        (fn (row-fn csv-reader)))
+    (setf (fill-pointer (line-data csv-reader)) 0)
     (csv-row-read row)
-    (vector-push-extend row (rows csv-reader)))
-  (setf (character-line-idx csv-reader) 0)
-  (setf (line-data csv-reader)
-        (make-array 10
-                    :element-type 'string
-                    :initial-element ""
-                    :adjustable t :fill-pointer 0)))
+    (if fn
+        (funcall fn row :reader csv-reader)
+        (vector-push-extend row (rows csv-reader)))))
+
+(defun drop-delimiter-chars (table entry)
+  (dotimes (i (- (length (delimiter entry)) 1))
+    (decf (fill-pointer (buffer table)))))
 
 (defmethod reading-separator (csv-reader c &key table-entry)
-  (declare (ignorable table-entry))
   (cond
     ((not (reading-quoted? csv-reader))
-     (setf (after-quoted? csv-reader) nil)
-     (collect-line-data csv-reader)
+     ;; rewind to before delim
+     (drop-delimiter-chars csv-reader table-entry)
+     (collect-datum csv-reader)
      t)
-    (t nil)))
+    (t (vector-push-extend c (buffer csv-reader)))))
 
 (defmethod reading-newline (csv-reader c &key table-entry)
   (declare (ignorable table-entry))
   (incf (line-idx csv-reader))
+  (setf (character-line-idx csv-reader) 0)
   (cond
     ((not (reading-quoted? csv-reader))
+     ;; rewind to before delim
+     (drop-delimiter-chars csv-reader table-entry)
      (collect-row-data csv-reader)
      t)
-    (t (vector-push-extend c (buffer csv-reader)))))
+    (t (vector-push-extend c (buffer csv-reader))
+       t )))
 
 (defun reading-character (csv-reader c &key table-entry)
   (declare (ignorable table-entry))
   (cond
     ((and *trim-outer-whitespace*
+          (not (reading-quoted? csv-reader))
           (white-space? c)
-          (zerop (fill-pointer (buffer csv-reader))))
-     ;; skip storing prefixing whitespace
+          (or (zerop (fill-pointer (buffer csv-reader)))
+              (after-quoted? csv-reader)))
+     ;; skip storing whitespace before or after
      T)
-    ((and (after-quoted? csv-reader)
-          (not (white-space? c)))
-     (csv-parse-error "non whitespace after quoted data ~a ~a"
-                      csv-reader c))
+    ((after-quoted? csv-reader)
+     (cond
+       ((not (white-space? c))
+        (csv-parse-error "non whitespace after quoted data ~a ~a"
+                         csv-reader c))
+       ((not *trim-outer-whitespace*)
+        (csv-parse-error "whitespace after quoted data thats not supposed to be trimmed ~a ~a"
+                         csv-reader c))
+       (t (vector-push-extend c (buffer csv-reader)))))
     (t
      ;; store the character
      (vector-push-extend c (buffer csv-reader))
@@ -165,17 +189,24 @@
   (make-instance
    'csv-reader
    :entries
-   (vector
-    (if (equal *escape-mode* :following)
-        (make-table-entry (vector *quote-escape* t) #'reading-escaped)
-        (make-table-entry (vector *quote* *quote*) #'reading-escaped))
+   (apply
+    #'vector
+    (alexandria:flatten
+     (list
+      (if (equal *escape-mode* :following)
+          (make-table-entry (vector *quote-escape* t) #'reading-escaped)
+          (make-table-entry (vector *quote* *quote*) #'reading-escaped))
+      (make-table-entry *quote* #'reading-quoted)
+      (make-table-entry *separator* #'reading-separator)
 
-    (make-table-entry *quote* #'reading-quoted)
-    (make-table-entry *separator* #'reading-separator)
-    (make-table-entry (vector #\return #\newline) #'reading-newline)
-    (make-table-entry (vector #\return #\return) #'reading-newline)
-    (make-table-entry (vector #\newline) #'reading-newline)
-    (make-table-entry t #'reading-character))))
+      (if (member *read-newline* '(t nil) :test #'equalp)
+          (list
+           (make-table-entry (vector #\return #\newline) #'reading-newline)
+           (make-table-entry (vector #\return #\return) #'reading-newline)
+           (make-table-entry (vector #\newline) #'reading-newline))
+          (make-table-entry *read-newline* #'reading-newline))
+      (make-table-entry t #'reading-character)
+      )))))
 
 (defun make-table-entry (delimiter dispatch)
   (let* ((d (if (eql delimiter t)
@@ -209,13 +240,12 @@
        (reset-table-entry te)
        nil))))
 
-(defun check-and-distpatch (table c &aux dispatched?)
+(defun check-and-distpatch (table c)
   (iter (for entry in-vector (entries table))
         (when (typep entry 'read-dispatch-table-entry)
           (when (check-table-entry entry c)
-            (setf dispatched? t)
-            (funcall (dispatch entry) table c :table-entry entry))))
-  dispatched?)
+            (funcall (dispatch entry) table c :table-entry entry)
+            (return t)))))
 
 (defun read-with-dispatch-table (table stream)
   (iter (for c = (read-char stream nil nil))
@@ -229,8 +259,12 @@
           (t
            ;; didnt dispatch so store
            (vector-push-extend c (buffer table)))))
+  (when (zerop (character-idx table))
+    (error (make-condition 'end-of-file :stream stream)))
   (when (reading-quoted? table)
-    (csv-parse-error "End of file while collecting quoted item: ~A" table))
+    (restart-case
+        (csv-parse-error "End of file while collecting quoted item: ~A" table)
+      (finish-item ())))
   (when (or (plusp (fill-pointer (buffer table)))
             (plusp (fill-pointer (line-data table))))
     (collect-row-data table)))
@@ -239,16 +273,15 @@
   (unless table
     (setf table (make-default-csv-dispatch-table)))
   (with-csv-input-stream (in-stream stream-or-string)
-    (read-with-dispatch-table table in-stream)))
+    (read-with-dispatch-table table in-stream)
+    (coerce (rows table) 'list)))
 
 (defun read-csv-row-with-table (stream-or-string &key table)
-  (unless table
-    (setf table (make-default-csv-dispatch-table)))
-  (with-csv-input-stream (in-stream stream-or-string)
-    (let ((*enable-signals* t))
-      (handler-bind ((csv-row-read
-                       (lambda (c)
-                         (adwutils:spy-break table (row c))
-                         (return-from read-csv-row-with-table
-                           (row c)))))
-        (read-with-dispatch-table table in-stream)))))
+  (flet ((return-row (it &key reader)
+           (declare (ignore reader))
+           (return-from read-csv-row-with-table it)))
+    (unless table
+      (setf table (make-default-csv-dispatch-table)))
+    (setf (row-fn table) #'return-row)
+    (with-csv-input-stream (in-stream stream-or-string)
+      (read-with-dispatch-table table in-stream))))

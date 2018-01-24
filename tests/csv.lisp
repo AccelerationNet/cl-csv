@@ -82,7 +82,11 @@ C. \"\"If you don't calm down I'm not sending anyone.\"\"
 D. \"\"Ma'am, ma'am\ ma'am!\"\"\",A")
 
 (define-test parsing-1 (:tags '(parsing))
-  (assert-equal *test-csv1-rows* (read-csv *test-csv1*))
+  (let ((rows (read-csv *test-csv1*)))
+    (assert-equal (length *test-csv1-rows*) (length rows))
+    (iter (for a in rows)
+          (for b in *test-csv1-rows*)
+          (assert-equal a b)))
   (assert-equal *test-csv1-rows* (read-csv *test-csv1-v2*)))
 
 (define-test writing-1 (:tags '(writing))
@@ -258,7 +262,7 @@ multiline" (nth 3 (first data)) ))
     (for i from 0)
     (finally (assert-equal 0 i))))
 
-(define-test sampling-iterate (:tags '(parsing iterate))
+(define-test sampling-iterate (:tags '(sampling iterate))
   (assert-length
    9 (iter (for row in-csv *test-csv1*)
        (cl-csv:sampling row)))

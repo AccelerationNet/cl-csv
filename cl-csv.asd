@@ -11,7 +11,7 @@
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files"
   :license "BSD"
-  :version "1.0"
+  :version "1.0.1"
   :serial t
   :components ((:file "packages")
                (:file "vars")
@@ -19,12 +19,12 @@
                (:file "csv"))
   :depends-on (:iterate :alexandria :cl-interpol))
 
-(defsystem :cl-csv-test
+(defsystem :cl-csv/test
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :license "BSD"
-  :version "1.0"
+  :version "1.0.1"
   :components ((:module :tests
 			:serial t
 			:components ((:file "csv"))))
