@@ -199,7 +199,9 @@ See: csv-reader "))
    we call this without having adding the character we just got
    that dispatched"
   (dotimes (i (- (length (delimiter entry)) 1))
-    (decf (fill-pointer (buffer table)))))
+    (when (eql (last-item (buffer table))
+               (aref (delimiter entry) i))
+      (decf (fill-pointer (buffer table))))))
 
 (defmethod reading-separator (csv-reader c &key table-entry)
   "We got the data separator character which will be handled

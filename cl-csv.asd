@@ -16,8 +16,8 @@
   :components ((:file "packages")
                (:file "vars")
                (:file "read-until")
-               (:file "csv2")
-               (:file "csv"))
+               (:file "csv")
+               (:file "parser"))
   :depends-on (:iterate :alexandria :cl-interpol))
 
 (defsystem :cl-csv/test
