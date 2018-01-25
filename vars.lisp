@@ -18,7 +18,7 @@
    ")
 
 ;; we want to read basically anything by default
-(defvar *read-newline* #?"\n"
+(defvar *read-newline* t
         "Default newline string for reading.
          We trim extra whitespace by default *trim-outer-whitespace*")
 

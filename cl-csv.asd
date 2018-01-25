@@ -16,6 +16,7 @@
   :components ((:file "packages")
                (:file "vars")
                (:file "read-until")
+               (:file "csv2")
                (:file "csv"))
   :depends-on (:iterate :alexandria :cl-interpol))
 
@@ -27,7 +28,8 @@
   :version "1.0.1"
   :components ((:module :tests
 			:serial t
-			:components ((:file "csv"))))
+                :components ((:file "csv")
+                             )))
   :depends-on (:cl-csv :lisp-unit2))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
