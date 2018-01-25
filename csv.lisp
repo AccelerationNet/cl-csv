@@ -2,8 +2,6 @@
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
 
-;; TODO: in-csv clause should use a single table instead of rebuilding
-
 ;;;; * Reading and Writing files in Comma-Seperated-Values format
 
 ;;;; Generating CSV files from lisp data
@@ -223,16 +221,13 @@ always-quote: Defaults to *always-quote*"
             (close ,name)))))))
 
 
-
-
-
 (iterate:defmacro-clause (for var in-csv input
                               &optional skipping-header skip-first-p
                               separator separator
                               quote quote
                               escaped-quote escaped-quote)
   "in-csv driver for iterate"
-  (alexandria:with-unique-names (stream opened? skip)
+  (alexandria:with-unique-names (stream opened? skip csv-reader)
     `(progn
       (with ,skip = ,skip-first-p)
       ;; can't bind values in a `with`, so listify and destructure
@@ -241,6 +236,7 @@ always-quote: Defaults to *always-quote*"
       (with *separator* = (or ,separator *separator*))
       (with *quote* = (or ,quote *quote*))
       (with *quote-escape* = (or ,escaped-quote *quote-escape*))
+      (with ,csv-reader = (make-default-csv-reader))
       (finally-protected
        (when (and ,stream ,opened?)
          (close ,stream)))
@@ -249,7 +245,7 @@ always-quote: Defaults to *always-quote*"
             ;; optionally skip the first row
             (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
             (for ,var =
-                 (restart-case (read-csv-row ,stream)
+                 (restart-case (read-csv-row ,stream :csv-reader ,csv-reader)
                    (continue ()
                      :report "skip reading this row and try again on the next"
                      (next-iteration))
@@ -327,7 +323,7 @@ body: body of the macro"
 (defun read-csv-row
     (stream-or-string
      &key
-     table
+     csv-reader
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
@@ -340,13 +336,13 @@ body: body of the macro"
      ((:newline *read-newline*) *read-newline*)
      ((:escape-mode *escape-mode*) *escape-mode*)
      )
-  (read-csv-row-with-table stream-or-string :table table))
+  (read-csv-row-with-reader stream-or-string :csv-reader csv-reader))
 
 (defun read-csv
     (stream-or-string
      &rest all-keys
      &key
-     table row-fn map-fn data-map-fn sample skip-first-p 
+     csv-reader row-fn map-fn data-map-fn sample skip-first-p 
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
@@ -359,13 +355,13 @@ body: body of the macro"
      ((:newline *read-newline*) *read-newline*)
      ((:escape-mode *escape-mode*) *escape-mode*)
      )
-  (declare (ignorable table data-map-fn))
+  (declare (ignorable csv-reader data-map-fn))
   (if sample
       (read-csv-sample
        stream-or-string sample
        :row-fn row-fn :map-fn map-fn :skip-first-p skip-first-p)
       (let ((args (list* stream-or-string all-keys)))
-      (apply #'read-csv-with-table args))))
+      (apply #'read-csv-with-reader args))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer

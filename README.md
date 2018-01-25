@@ -97,6 +97,10 @@ There are two modes for escaping currently
 
 ## Changelog
 
+* v 1.0.2 - standardized on csv-reader for a name instead
+  of using table in some places and reader in others
+  Updated iterate clauses
+
 * v 1.0.1 - New parser, same interface, faster and cleaner,
   and more flexible
   added data-map-fn, use this to handle null conversion

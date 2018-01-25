@@ -59,11 +59,13 @@
 
 (define-test count-big-file-csv-rows ()
   (let ((cnt 0))
-    (time-and-log-around (test-log "read large file test - flexible")
-      (cl-csv::read-csv-with-table +test-big-file+
-                           :row-fn (lambda (r) (declare (ignore r))
-                                     (incf cnt))
-                           ))
+    (time-and-log-around
+     (test-log "read large file test - flexible")
+     (cl-csv::read-csv-with-reader
+      +test-big-file+
+      :row-fn (lambda (r) (declare (ignore r))
+                (incf cnt))
+      ))
     cnt))
 
 (define-test read-by-line-and-buffer (:tags '(cl-csv-test::read-until))

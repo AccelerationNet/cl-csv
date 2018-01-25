@@ -255,7 +255,7 @@ See: csv-reader "))
      (vector-push-extend c (buffer csv-reader))
      t)))
 
-(defun make-default-csv-dispatch-table ()
+(defun make-default-csv-reader ()
   "Creates the default csv dispatch table
    This can usually be fully changed simply by tweaking the special variables
    defined in vars. You will need to reinstantiate this object when you change those variables
@@ -293,11 +293,12 @@ See: csv-reader "))
             (funcall (dispatch entry) table c :table-entry entry)
             (return t)))))
 
-(defun read-with-dispatch-table (table stream)
+(defun read-with-dispatch-table (table stream &aux (read-cnt 0))
   "A generic function for processing all the characters of a stream until
    a match arises and collecting that data as it goes"
   (iter (for c = (read-char stream nil nil))
         (while c)
+        (incf read-cnt)
         (incf (character-line-idx table))
         (incf (character-idx table))
         (cond
@@ -307,7 +308,7 @@ See: csv-reader "))
           (t
            ;; didnt dispatch so store
            (vector-push-extend c (buffer table)))))
-  (when (zerop (character-idx table))
+  (when (zerop read-cnt)
     (error (make-condition 'end-of-file :stream stream)))
   (when (reading-quoted? table)
     (restart-case
@@ -317,36 +318,36 @@ See: csv-reader "))
             (plusp (fill-pointer (line-data table))))
     (collect-row-data table)))
 
-(defun read-csv-with-table (stream-or-string
-                            &key table
+(defun read-csv-with-reader (stream-or-string
+                            &key csv-reader
                             (row-fn nil row-fn-p)
                             (map-fn nil map-fn-p)
                             (data-map-fn nil data-map-fn-p)
                             skip-first-p
                             &allow-other-keys)
   "Read a whole csv from the input"
-  (unless table
-    (setf table (make-default-csv-dispatch-table)))
-  (when row-fn-p (setf (row-fn table) row-fn))
-  (when map-fn-p (setf (map-fn table) map-fn))
-  (when data-map-fn-p (setf (data-map-fn table) data-map-fn))
-  (setf (skip-row? table) skip-first-p)
+  (unless csv-reader
+    (setf csv-reader (make-default-csv-reader)))
+  (when row-fn-p (setf (row-fn csv-reader) row-fn))
+  (when map-fn-p (setf (map-fn csv-reader) map-fn))
+  (when data-map-fn-p (setf (data-map-fn csv-reader) data-map-fn))
+  (setf (skip-row? csv-reader) skip-first-p)
   (with-csv-input-stream (in-stream stream-or-string)
-    (read-with-dispatch-table table in-stream)
-    (coerce (rows table) 'list)))
+    (read-with-dispatch-table csv-reader in-stream)
+    (coerce (rows csv-reader) 'list)))
 
-(defun read-csv-row-with-table (stream-or-string
-                                &key table
+(defun read-csv-row-with-reader (stream-or-string
+                                &key csv-reader
                                 (map-fn nil map-fn-p)
                                 (data-map-fn nil data-map-fn-p)
                                 &allow-other-keys)
   "Read a row of csv from the input"
   (flet ((return-row (it)
-           (return-from read-csv-row-with-table it)))
-    (unless table
-      (setf table (make-default-csv-dispatch-table)))
-    (when map-fn-p (setf (map-fn table) map-fn))
-    (when data-map-fn-p (setf (data-map-fn table) data-map-fn))
-    (setf (row-fn table) #'return-row)
+           (return-from read-csv-row-with-reader it)))
+    (unless csv-reader
+      (setf csv-reader (make-default-csv-reader)))
+    (when map-fn-p (setf (map-fn csv-reader) map-fn))
+    (when data-map-fn-p (setf (data-map-fn csv-reader) data-map-fn))
+    (setf (row-fn csv-reader) #'return-row)
     (with-csv-input-stream (in-stream stream-or-string)
-      (read-with-dispatch-table table in-stream))))
+      (read-with-dispatch-table csv-reader in-stream))))
