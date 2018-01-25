@@ -2,6 +2,8 @@
 (in-package :cl-csv)
 (cl-interpol:enable-interpol-syntax)
 
+;; TODO: in-csv clause should use a single table instead of rebuilding
+
 ;;;; * Reading and Writing files in Comma-Seperated-Values format
 
 ;;;; Generating CSV files from lisp data
@@ -342,8 +344,9 @@ body: body of the macro"
 
 (defun read-csv
     (stream-or-string
+     &rest all-keys
      &key
-     table row-fn map-fn sample skip-first-p 
+     table row-fn map-fn data-map-fn sample skip-first-p 
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
@@ -356,17 +359,13 @@ body: body of the macro"
      ((:newline *read-newline*) *read-newline*)
      ((:escape-mode *escape-mode*) *escape-mode*)
      )
+  (declare (ignorable table data-map-fn))
   (if sample
       (read-csv-sample
        stream-or-string sample
        :row-fn row-fn :map-fn map-fn :skip-first-p skip-first-p)
-      (read-csv-with-table
-       stream-or-string
-       :table table
-       :row-fn row-fn
-       :map-fn map-fn
-       :skip-first-p
-       skip-first-p)))
+      (let ((args (list* stream-or-string all-keys)))
+      (apply #'read-csv-with-table args))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer

@@ -96,8 +96,20 @@ See: csv-reader "))
    (after-quoted?  :initform () :accessor after-quoted?)
    (row-fn :initform () :accessor row-fn :initarg :row-fn)
    (map-fn :initform () :accessor map-fn :initarg :map-fn)
+   (data-map-fn :initform 'map-empty-string-to-nil :accessor data-map-fn :initarg :data-map-fn)
    (skip-row? :initform nil :initarg :skip-row? :accessor skip-row?))
   (:documentation "the state of the csv reader, which is also is a read table"))
+
+(defun map-empty-string-to-nil (data &key csv-reader &allow-other-keys)
+  (if (and
+       (stringp data)            ;; other filters  /mapping could have happend
+       (zerop (length data))
+       (or (and (after-quoted? csv-reader)
+                *quoted-empty-string-is-nil*)
+           (and (not (after-quoted? csv-reader))
+                *unquoted-empty-string-is-nil*)))
+      nil
+      data))
 
 
 (defmethod reading-quoted (csv-reader c  &key table-entry)
@@ -148,7 +160,8 @@ See: csv-reader "))
      ))
   t)
 
-(defun collect-datum (csv-reader)
+(defun collect-datum (csv-reader
+                      &aux (data-map-fn (data-map-fn csv-reader)))
   (when (and (not (after-quoted? csv-reader))
              (not (reading-quoted? csv-reader))
              *trim-outer-whitespace*)
@@ -158,13 +171,9 @@ See: csv-reader "))
      (decf (fill-pointer (buffer csv-reader)))))
 
   (let ((d (copy-seq (string (buffer csv-reader)))))
-    (when (and (zerop (length d))
-               (or (and (after-quoted? csv-reader)
-                        *quoted-empty-string-is-nil*)
-                   (and (not (after-quoted? csv-reader))
-                        *unquoted-empty-string-is-nil*)))
-      (setf d nil))
     (setf d (csv-data-read d :csv-reader csv-reader))
+    (when data-map-fn
+      (setf d (funcall data-map-fn d :csv-reader csv-reader)))
     (vector-push-extend d (line-data csv-reader)))
   (setf (fill-pointer (buffer csv-reader)) 0
         (reading-quoted? csv-reader) nil
@@ -305,23 +314,36 @@ See: csv-reader "))
             (plusp (fill-pointer (line-data table))))
     (collect-row-data table)))
 
-(defun read-csv-with-table (stream-or-string &key table row-fn map-fn skip-first-p)
+(defun read-csv-with-table (stream-or-string
+                            &key table
+                            (row-fn nil row-fn-p)
+                            (map-fn nil map-fn-p)
+                            (data-map-fn nil data-map-fn-p)
+                            skip-first-p
+                            &allow-other-keys)
   "Read a whole csv from the input"
   (unless table
     (setf table (make-default-csv-dispatch-table)))
-  (setf (row-fn table) row-fn)
-  (setf (map-fn table) map-fn)
+  (when row-fn-p (setf (row-fn table) row-fn))
+  (when map-fn-p (setf (map-fn table) map-fn))
+  (when data-map-fn-p (setf (data-map-fn table) data-map-fn))
   (setf (skip-row? table) skip-first-p)
   (with-csv-input-stream (in-stream stream-or-string)
     (read-with-dispatch-table table in-stream)
     (coerce (rows table) 'list)))
 
-(defun read-csv-row-with-table (stream-or-string &key table)
+(defun read-csv-row-with-table (stream-or-string
+                                &key table
+                                (map-fn nil map-fn-p)
+                                (data-map-fn nil data-map-fn-p)
+                                &allow-other-keys)
   "Read a row of csv from the input"
   (flet ((return-row (it)
            (return-from read-csv-row-with-table it)))
     (unless table
       (setf table (make-default-csv-dispatch-table)))
+    (when map-fn-p (setf (map-fn table) map-fn))
+    (when data-map-fn-p (setf (data-map-fn table) data-map-fn))
     (setf (row-fn table) #'return-row)
     (with-csv-input-stream (in-stream stream-or-string)
       (read-with-dispatch-table table in-stream))))

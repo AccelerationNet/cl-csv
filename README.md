@@ -8,6 +8,8 @@ This library aims to simplify working with csvs to the bare minimum of tedium
 * settable quote, separator and quote-escapes
 * supports multiline quoted data
 * A test suite
+* Detailed state about the process on error (line number, column number, char index), 
+  current collection state
 
 ## Rationale 
 
@@ -34,7 +36,8 @@ There are two modes for escaping currently
    the `*quote-escape*` will be set to `#\\` when the escape mode is following.
 
 ## Signals and Restarts
- * `*enable-signals*` will cause a csv-data-read or csv-row-read to be
+
+* `*enable-signals*` will cause a csv-data-read or csv-row-read to be
    signaled for each piece of data and row read.  There is a `filter`
    restart available which will cause the filter value to be used
    instead.  Enabling signals is ~2xs as slow as not, so by default
@@ -42,6 +45,13 @@ There are two modes for escaping currently
  * `in-csv` iterate clause and `read-csv` support `continue` and `filter`
    restarts for errors occuring during read-csv-row
 
+## Functional Filters 
+
+ * row-fn (lambda (row) ) - does something with a row instead of collecting it
+ * map-fn (lambda (row) ) - can modify a row on the way to collecting it
+ * data-map-fn (lambda (datum &key csv-reader  &allow-other-keys) ) 
+   can modify a single datum on the way to collecting it, used to implement empty 
+   string to null conversions
 
 ## Library Integration
 
@@ -84,6 +94,14 @@ There are two modes for escaping currently
 (iter (for (foo bar baz) in-csv #P"file.csv")
   (collect (make-instance 'object :foo foo :baz baz)))
 ```
+
+## Changelog
+
+* v 1.0.1 - New parser, same interface, faster and cleaner,
+  and more flexible
+  added data-map-fn, use this to handle null conversion
+  
+* v 1.0 - Long term stable version
 
 ## Authors
  * [Acceleration.net](http://www.acceleration.net/)

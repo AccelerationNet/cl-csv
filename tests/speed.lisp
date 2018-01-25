@@ -59,11 +59,6 @@
 
 (define-test count-big-file-csv-rows ()
   (let ((cnt 0))
-    (time-and-log-around (test-log "read large file test - optimized")
-      (cl-csv::read-csv-optimized +test-big-file+
-                :row-fn (lambda (r) (declare (ignore r))
-                          (incf cnt))
-                ))
     (time-and-log-around (test-log "read large file test - flexible")
       (cl-csv::read-csv-with-table +test-big-file+
                            :row-fn (lambda (r) (declare (ignore r))
