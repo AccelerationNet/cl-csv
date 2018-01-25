@@ -198,10 +198,11 @@ See: csv-reader "))
   "This backs up the buffer till the delimiter is not in it
    we call this without having adding the character we just got
    that dispatched"
-  (dotimes (i (- (length (delimiter entry)) 1))
-    (when (eql (last-item (buffer table))
-               (aref (delimiter entry) i))
-      (decf (fill-pointer (buffer table))))))
+  (iter (for i from (- (length (delimiter entry)) 2) downto 0)
+        (while (eql (last-item (buffer table))
+                    (aref (delimiter entry) i)))
+        (decf (fill-pointer (buffer table)))
+        ))
 
 (defmethod reading-separator (csv-reader c &key table-entry)
   "We got the data separator character which will be handled
