@@ -508,3 +508,20 @@ order by t1.fspace, t1.fad_target_classid) TO STDOUT DELIMITER ',' NULL 'null' C
   (let* ((csv (read-csv +test-tab-csv-issue-10+ :quote #\nul :separator #\tab))
          (row1 (second csv)))
     (assert-equal "72\"" (second row1) csv)))
+
+(defparameter +test-next-delim-csv+ "id-next-inches-next-name-row-
+1-next-72-next-Russ Tyndall-row-
+2-next-67-next-Amy Bobanolis-row-
+")
+(defparameter +test-next-delim-csv-rows+
+  '(("id" "inches" "name")
+    ("1" "72" "Russ Tyndall")
+    ("2" "67" "Amy Bobanolis")))
+
+(define-test multi-char-separators (:tags '(parsing))
+  (let ((rows (read-csv +test-next-delim-csv+
+                        :newline "-row-" :separator "-next-")))
+    (assert-eql (length rows) 3 "There should be three rows")
+    (iter (for r in +test-next-delim-csv-rows+)
+          (for s in rows)
+          (assert-equal r s))))
