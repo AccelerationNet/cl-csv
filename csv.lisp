@@ -221,6 +221,17 @@ always-quote: Defaults to *always-quote*"
             (close ,name)))))))
 
 
+(defun restartable-read-row (stream csv-reader)
+  (handler-case
+      (restart-case (read-csv-row stream :csv-reader csv-reader)
+        (continue ()
+          :report "skip reading this row and try again on the next"
+          'do-next-iter)
+        (filter (new-row)
+          :report "supply a different row to use instead of this erroring csv-row"
+          new-row))
+    (end-of-file () 'finish-iteration)))
+
 (iterate:defmacro-clause (for var in-csv input
                               &optional skipping-header skip-first-p
                               separator separator
@@ -240,19 +251,13 @@ always-quote: Defaults to *always-quote*"
       (finally-protected
        (when (and ,stream ,opened?)
          (close ,stream)))
-      (handler-case
-          (progn
-            ;; optionally skip the first row
-            (when (and ,skip (first-iteration-p)) (read-csv-row ,stream))
-            (for ,var =
-                 (restart-case (read-csv-row ,stream :csv-reader ,csv-reader)
-                   (continue ()
-                     :report "skip reading this row and try again on the next"
-                     (next-iteration))
-                   (filter (new-row)
-                     :report "supply a different row to use instead of this erroring csv-row"
-                     new-row))))
-        (end-of-file () (finish))))))
+      (for ,var = (restartable-read-row ,stream ,csv-reader))
+      (when (or (and ,skip (first-iteration-p))
+                (eql ,var 'do-next-iter))
+        (next-iteration))
+      (when (eql ,var 'finish-iteration)
+        (finish))
+      )))
 
 (iterate:defmacro-clause (sampling expr &optional into var size size)
   "resevoir sample the input"
