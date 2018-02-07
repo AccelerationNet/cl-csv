@@ -319,12 +319,12 @@ See: csv-reader "))
     (collect-row-data table)))
 
 (defun read-csv-with-reader (stream-or-string
-                            &key csv-reader
-                            (row-fn nil row-fn-p)
-                            (map-fn nil map-fn-p)
-                            (data-map-fn nil data-map-fn-p)
-                            skip-first-p
-                            &allow-other-keys)
+                             &key csv-reader
+                             (row-fn nil row-fn-p)
+                             (map-fn nil map-fn-p)
+                             (data-map-fn nil data-map-fn-p)
+                             skip-first-p
+                             &allow-other-keys)
   "Read a whole csv from the input"
   (unless csv-reader
     (setf csv-reader (make-default-csv-reader)))
@@ -332,9 +332,16 @@ See: csv-reader "))
   (when map-fn-p (setf (map-fn csv-reader) map-fn))
   (when data-map-fn-p (setf (data-map-fn csv-reader) data-map-fn))
   (setf (skip-row? csv-reader) skip-first-p)
-  (with-csv-input-stream (in-stream stream-or-string)
-    (read-with-dispatch-table csv-reader in-stream)
-    (coerce (rows csv-reader) 'list)))
+  (handler-case
+      (with-csv-input-stream (in-stream stream-or-string)
+        (read-with-dispatch-table csv-reader in-stream)
+        (coerce (rows csv-reader) 'list))
+    (end-of-file (c)
+      ;; this is signaled if we read an empty csv
+      ;; it needs to happend for read-csv-row to work
+      ;; with iterate, but doesnt need to happen in this fn
+      (declare (ignore c))
+      (coerce (rows csv-reader) 'list))))
 
 (defun read-csv-row-with-reader (stream-or-string
                                 &key csv-reader
