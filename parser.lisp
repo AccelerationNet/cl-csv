@@ -7,7 +7,15 @@
     :initform (make-array *buffer-size*
                           :element-type 'character
                           :initial-element #\null
-                          :adjustable t :fill-pointer 0))
+                          :fill-pointer 0 :adjustable t))
+   (%buffer
+    :accessor %buffer
+    :initarg :%buffer
+    :initform (make-array *buffer-size*
+                          :element-type 'character
+                          :initial-element #\null))
+   (bidx :accessor bidx :initarg :bidx :initform -1)
+   (bmax :accessor bmax :initarg :bmax :initform -1)
    (entries :initform nil :initarg :entries :accessor entries )
    (line-idx :initform 0 :initarg :line-idx :accessor line-idx)
    (character-line-idx
@@ -293,10 +301,20 @@ See: csv-reader "))
             (funcall (dispatch entry) table c :table-entry entry)
             (return t)))))
 
+(defun %ensure-buffer-next-char (table stream )
+  (when (or (< (bidx table) 0)
+            (<= (bmax table) (bidx table)))
+    (setf (bmax table) (read-sequence (%buffer table) stream))
+    (setf (bidx table) 0))
+  (when (zerop (bmax table))
+    (return-from %ensure-buffer-next-char nil))
+  (prog1 (char (%buffer table) (bidx table))
+    (incf (bidx table))))
+
 (defun read-with-dispatch-table (table stream &aux (read-cnt 0))
   "A generic function for processing all the characters of a stream until
    a match arises and collecting that data as it goes"
-  (iter (for c = (read-char stream nil nil))
+  (iter (for c = (%ensure-buffer-next-char table stream))
         (while c)
         (incf read-cnt)
         (incf (character-line-idx table))
