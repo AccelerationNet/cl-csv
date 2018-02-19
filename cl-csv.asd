@@ -48,7 +48,7 @@
                (:module :tests
 			:serial t
                 :components ((:file "speed"))))
-  :depends-on (:cl-csv :lisp-unit2))
+  :depends-on (:cl-csv :cl-csv/test :lisp-unit2))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
