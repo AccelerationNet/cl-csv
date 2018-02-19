@@ -37,6 +37,19 @@
   (let ((*package* (find-package :cl-csv/test)))
     (eval (read-from-string "(run-all-tests)"))))
 
+
+(defsystem :cl-csv/speed-test
+  :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
+  :description "Tests for a library providing a cl-csv class, and useful
+     functionality around this"
+  :license "BSD"
+  :version "1.0.3"
+  :components ((:file "csv-old")
+               (:module :tests
+			:serial t
+                :components ((:file "speed"))))
+  :depends-on (:cl-csv :lisp-unit2))
+
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved.

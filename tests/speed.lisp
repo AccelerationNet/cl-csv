@@ -1,9 +1,13 @@
+
 (defpackage :cl-csv-test.speed-tests
   (:use :cl :cl-user :cl-csv :lisp-unit2 :iter))
 
 (in-package :cl-csv-test.speed-tests)
 
+
+
 (defun run-speed-tests ()
+  (write-big-file) ;; just make sure that we have test file
   (lisp-unit2:run-tests
    :package :cl-csv-test.speed-tests
    :name :cl-csv-speed-tests
@@ -68,8 +72,8 @@
       ))
     cnt))
 
-(define-test read-by-line-and-buffer (:tags '(cl-csv-test::read-until))
-  (let ((cnt 0) (cnt2 0) (cnt3 0))
+(define-test read-by-line-and-buffer-and-char (:tags '(cl-csv-test::read-until))
+  (let ((cnt 0) (cnt2 0) (cnt3 0) (cnt4 0))
     (time-and-log-around (test-log "read large file by lines")
       (let ( line)
         (cl-csv::with-csv-input-stream (s +test-big-file+ )
@@ -98,13 +102,29 @@
                 do (incf cnt3))
             (end-of-file (c) (declare (ignore c)))))))
 
+    (time-and-log-around (test-log "read large file by char")
+      (cl-csv::with-csv-input-stream (s +test-big-file+ )
+        (let ((c))
+          (handler-case
+              (loop
+                while (setf c (read-char s))
+                do (incf cnt4))
+            (end-of-file (c) (declare (ignore c)))))))
+
     (format lisp-unit2:*test-stream*
-            "~@:_ lines:~D , buffers:~D, buffered-lines:~D~@:_"
-            cnt cnt2 cnt3)))
+            "~@:_ lines:~D , buffers:~D, buffered-lines:~D, chars:~D~@:_"
+            cnt cnt2 cnt3 cnt4)))
 
 (define-test collect-big-file-csv-rows ()
-  (time-and-log-around (test-log "read large file test")
+  (time-and-log-around (test-log "read-csv large file test")
     (read-csv +test-big-file+))
+  nil ; so we dont print 10m to the repl
+  )
+
+;; You must load the old implementation for this to work
+(define-test collect-big-file-csv-rows-old ()
+  (time-and-log-around (test-log "read-csv-old large file test")
+    (cl-csv::read-csv-old +test-big-file+))
   nil ; so we dont print 10m to the repl
   )
 

@@ -1,0 +1,47 @@
+
+
+SPEED-TESTS> (read-by-line-and-buffer-and-char)
+;;; Just reading a big file
+
+10:59:20 BEGIN read large file by lines
+10:59:20   END read large file by lines
+Evaluation took:
+  0.235 seconds of real time
+  0.232000 seconds of total run time (0.228000 user, 0.004000 system)
+  [ Run times consist of 0.052 seconds GC time, and 0.180 seconds non-GC time. ]
+  98.72% CPU
+  797,098,094 processor cycles
+  50,999,696 bytes consed
+
+
+10:59:20 BEGIN read large file by buffer
+10:59:21   END read large file by buffer
+Evaluation took:
+  0.075 seconds of real time
+  0.076000 seconds of total run time (0.072000 user, 0.004000 system)
+  101.33% CPU
+  255,064,516 processor cycles
+  0 bytes consed
+
+
+10:59:21 BEGIN read large file by read-into-buffer-until
+10:59:21   END read large file by read-into-buffer-until
+Evaluation took:
+  0.198 seconds of real time
+  0.200000 seconds of total run time (0.196000 user, 0.004000 system)
+  101.01% CPU
+  669,845,392 processor cycles
+  0 bytes consed
+
+
+10:59:21 BEGIN read large file by char
+10:59:21   END read large file by char
+Evaluation took:
+  0.186 seconds of real time
+  0.184000 seconds of total run time (0.184000 user, 0.000000 system)
+  98.92% CPU
+  631,960,580 processor cycles
+  0 bytes consed
+
+
+ lines:120001 , buffers:133502, buffered-lines:120001, chars:10680089
