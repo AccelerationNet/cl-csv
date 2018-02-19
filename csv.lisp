@@ -238,7 +238,7 @@ always-quote: Defaults to *always-quote*"
                               quote quote
                               escaped-quote escaped-quote)
   "in-csv driver for iterate"
-  (alexandria:with-unique-names (stream opened? skip csv-reader)
+  (alexandria:with-unique-names (stream opened? skip csv-reader row)
     `(progn
       (with ,skip = ,skip-first-p)
       ;; can't bind values in a `with`, so listify and destructure
@@ -251,12 +251,13 @@ always-quote: Defaults to *always-quote*"
       (finally-protected
        (when (and ,stream ,opened?)
          (close ,stream)))
-      (for ,var = (restartable-read-row ,stream ,csv-reader))
+      (for ,row = (restartable-read-row ,stream ,csv-reader))
       (when (or (and ,skip (first-iteration-p))
-                (eql ,var 'do-next-iter))
+                (eql ,row 'do-next-iter))
         (next-iteration))
-      (when (eql ,var 'finish-iteration)
+      (when (eql ,row 'finish-iteration)
         (finish))
+      (for ,var = ,row)
       )))
 
 (iterate:defmacro-clause (sampling expr &optional into var size size)
