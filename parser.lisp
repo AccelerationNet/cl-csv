@@ -267,10 +267,13 @@ See: csv-reader "))
     #'vector
     (alexandria:flatten
      (list
-      (if (equal *escape-mode* :following)
-          (make-table-entry (vector *quote-escape* t) #'reading-escaped)
-          (make-table-entry (vector *quote* *quote*) #'reading-escaped))
-      (make-table-entry *quote* #'reading-quoted)
+      (when *quote*
+        (list
+         (if (equal *escape-mode* :following)
+             (make-table-entry (vector *quote-escape* t) #'reading-escaped)
+             (make-table-entry (vector *quote* *quote*) #'reading-escaped))
+         (make-table-entry *quote* #'reading-quoted)))
+
       (make-table-entry *separator* #'reading-separator)
 
       (if (member *read-newline* '(t nil) :test #'equalp)
