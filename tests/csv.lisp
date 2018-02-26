@@ -459,9 +459,10 @@ multiline" (nth 3 (first data)) ))
     ))
 
 (define-test backslash-escapes (:tags '(backslash escapes parsing))
-  (lisp-unit2:assert-error
-   'csv-parse-error
-   (cl-csv:read-csv +test-backslash-escapes+ :escape #?|\"|))
+  (let ((res
+          (cl-csv:read-csv-row +test-backslash-escapes+ :escape #?|\"|)))
+    (assert-equal "\"\\id\"" (first res)
+                  "we removed the quotes, but not the rest of the escapes"))
   (let ((results (cl-csv:read-csv
                   +test-backslash-escapes+
                   :escape #\\ :escape-mode :following )))
@@ -525,3 +526,16 @@ order by t1.fspace, t1.fad_target_classid) TO STDOUT DELIMITER ',' NULL 'null' C
     (iter (for r in +test-next-delim-csv-rows+)
           (for s in rows)
           (assert-equal r s))))
+
+(define-test escape-regression (:tags '(issue-27 parsing))
+  (assert-equal
+   '("2918" "\"?\"" "" "\"" "test")
+   (cl-csv:read-csv-row
+    #?|2918,"""?""","","""","test"|
+    :separator #\, :quote #\" :escape "\"\"" :escape-mode :quote)
+   ))
+
+(define-test unquoted-data (:tags '(issue-26 parsing))
+  (cl-csv:read-csv-row
+   "2918,this is a \"no quote\" test, does it work?"
+   :separator #\, :quote nil))

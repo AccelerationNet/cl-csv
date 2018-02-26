@@ -27,7 +27,8 @@
         "When writing what should the newline convention be ")
 
 (defvar *always-quote* nil "Default setting for always quoting")
-(defvar *quote-escape* #?"${ *quote* }${ *quote* }" "Default setting for escaping quotes")
+(defvar *quote-escape* nil
+  "Default setting for escaping quotes - by default this is a vector of #(*quote* *quote*)")
 (defvar *unquoted-empty-string-is-nil* nil
   "Should unquoted empty string values, be nil or \"\".")
 

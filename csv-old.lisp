@@ -21,6 +21,8 @@
      ((:newline *read-newline*) *read-newline*)
      ((:escape-mode *escape-mode*) *escape-mode*)
      &aux
+     (*quote-escape* (or *quote-escape*
+                         #?"${ *quote* }${ *quote* }"))
      (*separator* (etypecase *separator*
                     (string (if (= 1 (length *separator*))
                                 (schar *separator* 0)
