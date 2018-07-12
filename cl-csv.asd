@@ -11,7 +11,7 @@
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files"
   :license "BSD"
-  :version "1.0.5"
+  :version "1.0.6"
   :serial t
   :components ((:file "packages")
                (:file "vars")
@@ -25,7 +25,7 @@
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :license "BSD"
-  :version "1.0.5"
+  :version "1.0.6"
   :components ((:module :tests
 			:serial t
                 :components ((:file "csv")
@@ -43,7 +43,7 @@
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :license "BSD"
-  :version "1.0.5"
+  :version "1.0.6"
   :components ((:file "csv-old")
                (:module :tests
 			:serial t

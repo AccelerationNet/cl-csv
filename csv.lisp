@@ -92,6 +92,7 @@ always-quote: Defaults to *always-quote*")
             (always-quote *always-quote*)
             (newline *write-newline*)
             &aux
+            (escape (or escape #(#\" #\")))
             (formatted-value (funcall formatter val))
             (should-quote (or always-quote
                               (chars-in (list quote separator newline)
