@@ -67,20 +67,25 @@ See: csv-reader "))
   (setf (didx te) -1))
 
 (defmethod check-table-entry (table entry c)
-  "Given the next character in a stream check if the table entry matches
-   reset if it matches fully or doesnt match"
+  "Given the next character in a stream check if the table entry
+   matches reset if it matches fully or doesnt match. Returns the
+   dispatch function as a primary value if the entry matched and is
+   complete, or NIL otherwise. A secondary value is returned that
+   indicates whether this entry matched the input character."
   (declare (ignore table))
   (incf (didx entry))
   (let ((de-char (aref (delimiter entry) (didx entry))))
     (cond
       ((or (eql t de-char)
            (char= c de-char))
-       (when (eql (didx entry) (dlen-1 entry))
-         (reset-table-entry entry)
-         t))
+       (cond
+         ((eql (didx entry) (dlen-1 entry))
+          (reset-table-entry entry)
+          (values (dispatch entry) t))
+         (t (values nil t))))
       (t
        (reset-table-entry entry)
-       nil))))
+       (values nil nil)))))
 
 ;; holds the states that the state machine events will drive
 (defclass csv-reader (read-dispatch-table)
@@ -361,9 +366,12 @@ See: csv-reader "))
    if it matches, call the function with the table character and entry"
   (iter (for entry in-vector (entries table))
         (when (typep entry 'read-dispatch-table-entry)
-          (when (check-table-entry table entry c)
-            (funcall (dispatch entry) table c :table-entry entry)
-            (return t)))))
+          (multiple-value-bind (dispatch matchedp)
+              (check-table-entry table entry c)
+            (when dispatch
+              (funcall dispatch table c :table-entry entry))
+            (when matchedp
+              (return t))))))
 
 (defun read-with-dispatch-table (table stream &aux (read-cnt 0))
   "A generic function for processing all the characters of a stream until
