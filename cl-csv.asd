@@ -34,7 +34,7 @@
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
   (asdf:oos 'asdf:load-op :cl-csv/test)
-  (let ((*package* (find-package :cl-csv/test)))
+  (let ((*package* (find-package :cl-csv-test)))
     (eval (read-from-string "(run-all-tests)"))))
 
 
