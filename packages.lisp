@@ -1,5 +1,5 @@
 (cl:defpackage :cl-csv
-  (:use :cl :cl-user :iterate)
+  (:use :cl :iterate)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
    :*quote* :*separator* :*quote-escape*
