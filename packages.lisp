@@ -2,7 +2,7 @@
   (:use :cl :cl-user :iterate)
   (:export :read-csv :csv-parse-error :format-csv-value
    :write-csv-value :write-csv-row :read-csv-row :write-csv :read-csv
-   :*quote* :*separator* :*newline* :*quote-escape* :*empty-string-is-nil*
+   :*quote* :*separator* :*quote-escape*
    #:read-csv-sample #:sampling #:data #:row
 
    ;; signals
