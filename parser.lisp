@@ -1,5 +1,6 @@
 (in-package :cl-csv)
 
+
 (defclass read-dispatch-table ()
   ((parse-stream :accessor parse-stream :initarg :parse-stream :initform nil)
    (buffer
@@ -30,20 +31,17 @@ See: csv-reader "))
            (when v (format s "~A:~S " slt v)))
     (ignore-errors (format s "~S" (string (buffer o))))))
 
-(defclass read-dispatch-table-entry ()
-  ((delimiter :type (vector (or boolean character))
-              :accessor delimiter :initarg :delimiter :initform nil)
-   (didx :type fixnum :initform -1 :accessor didx :initarg :didx)
-   (dlen :type fixnum :initform 0 :accessor dlen :initarg :dlen)
-   (dlen-1 :type fixnum :initform -1 :accessor dlen-1 :initarg :dlen-1)
-   (dispatch :type function :initform nil :accessor dispatch  :initarg :dispatch)
-   )
-  (:documentation "When a certain delimiter is matched it will call a certain function
-    T matches anything
-    create these with make-table-entry"))
+(defstruct read-dispatch-table-entry
+  (delimiter #() :type simple-vector)
+  (didx -1 :type fixnum)
+  (dlen 0 :type fixnum)
+  (dlen-1 -1 :type fixnum)
+  dispatch)
 
-(defun make-table-entry (delimiter dispatch
-                         &key (class 'read-dispatch-table-entry))
+(setf (documentation 'read-dispatch-table-entry 'type)
+      "When a certain delimiter is matched it will call a certain function. T matches anything. Create these with make-table-entry")
+
+(defun make-table-entry (delimiter dispatch)
   "Creates a table entry ensuring everything has the correct
    types and values"
   (let* ((d (if (eql delimiter t)
@@ -54,28 +52,34 @@ See: csv-reader "))
                   (string delimiter)
                   ((or simple-vector vector simple-array array) delimiter)
                   (list (apply #'vector delimiter)))))
-         (te (make-instance
-              class
+         (te (make-read-dispatch-table-entry
               :delimiter d
               :dispatch dispatch
               :dlen (length d)
               :dlen-1 (- (length d) 1))))
     te))
 
+(declaim (inline reset-table-entry))
 (defun reset-table-entry (te)
   "resets the entry state when it doesnt match"
-  (setf (didx te) -1))
+  (setf (read-dispatch-table-entry-didx te) -1))
 
-(defmethod check-table-entry (table entry c)
+
+(declaim (inline check-table-entry))
+(defun check-table-entry (table entry c)
   "Given the next character in a stream check if the table entry matches
    reset if it matches fully or doesnt match"
-  (declare (ignore table))
-  (incf (didx entry))
-  (let ((de-char (aref (delimiter entry) (didx entry))))
+  (declare (ignore table)
+           (type read-dispatch-table-entry entry)
+           (type character c))
+  (incf (read-dispatch-table-entry-didx entry))
+  (let ((de-char (aref (read-dispatch-table-entry-delimiter entry)
+                       (read-dispatch-table-entry-didx entry))))
     (cond
       ((or (eql t de-char)
            (char= c de-char))
-       (when (eql (didx entry) (dlen-1 entry))
+       (when (eql (read-dispatch-table-entry-didx entry)
+                  (read-dispatch-table-entry-dlen-1 entry))
          (reset-table-entry entry)
          t))
       (t
@@ -127,12 +131,13 @@ See: csv-reader "))
   (let ((idx (- (fill-pointer buff) 1)))
     (setf (aref buff idx) new)))
 
+(declaim (inline %next-char))
 (defun %next-char (reader)
   (incf (character-idx reader))
   (incf (character-line-idx reader))
   (read-char (parse-stream reader) nil nil))
 
-(defmethod reading-quoted-or-escaped (csv-reader c  &key table-entry)
+(defun reading-quoted-or-escaped (csv-reader c  &key table-entry)
   "Method to handle reading a quote or a pair of quotes"
   (declare (ignorable table-entry))
   (assert (and (eql *escape-mode* :quote)
@@ -163,7 +168,7 @@ See: csv-reader "))
      )
   t)
 
-(defmethod reading-quoted (csv-reader c  &key table-entry)
+(defun reading-quoted (csv-reader c  &key table-entry)
   "Method to handle reading a quote
    NB: this interacts wierdly with escape-mode :quote "
   (declare (ignorable table-entry))
@@ -181,7 +186,7 @@ See: csv-reader "))
     (setf (after-quoted? csv-reader) t))
   t)
 
-(defmethod reading-following-escaped (csv-reader c &key table-entry)
+(defun reading-following-escaped (csv-reader c &key table-entry)
   "We read an escape sequence and need to handle storing
    the escaped character"
   (declare (ignorable table-entry))
@@ -193,7 +198,7 @@ See: csv-reader "))
      ))
   t)
 
-(defmethod reading-escaped (csv-reader c &key table-entry)
+(defun reading-escaped (csv-reader c &key table-entry)
   "We read an escape sequence and need to handle storing
    the escaped character"
   (drop-delimiter-chars csv-reader table-entry)
@@ -238,16 +243,18 @@ See: csv-reader "))
             (vector-push-extend row (rows csv-reader))))))
 
 (defun drop-delimiter-chars (table entry)
+  (declare (optimize (speed 3))
+           (type read-dispatch-table-entry table))
   "This backs up the buffer till the delimiter is not in it
    we call this without having adding the character we just got
    that dispatched"
-  (iter (for i from (- (length (delimiter entry)) 2) downto 0)
+  (iter (for i from (- (length (read-dispatch-table-entry-delimiter entry)) 2) downto 0)
         (while (eql (last-item (buffer table))
-                    (aref (delimiter entry) i)))
+                    (aref (read-dispatch-table-entry-delimiter entry) i)))
         (decf (fill-pointer (buffer table)))
         ))
 
-(defmethod reading-separator (csv-reader c &key table-entry)
+(defun reading-separator (csv-reader c &key table-entry)
   "We got the data separator character which will be handled
    differently based on if we are in quoted data or not"
   (cond
@@ -258,7 +265,7 @@ See: csv-reader "))
      t)
     (t (vector-push-extend c (buffer csv-reader)))))
 
-(defmethod reading-newline (csv-reader c &key table-entry)
+(defun reading-newline (csv-reader c &key table-entry)
    "We got the newline character which will be handled
    differently based on if we are in quoted data or not"
   (declare (ignorable table-entry))
@@ -317,69 +324,85 @@ See: csv-reader "))
   (make-instance
    'csv-reader
    :entries
-   (apply
-    #'vector
-    (alexandria:flatten
-     (list
-      (when *quote*
-        (cond
-          ;; Escape is two adjacent quotes in quoted data
-          ((and (eql *escape-mode* :quote)
-                (or (null *quote-escape*)
-                    (%escape-is-double-quote)))
-           (make-table-entry *quote* #'reading-quoted-or-escaped))
-          ;; escape is a literal sequence of chars that mean quote
-          ((eql *escape-mode* :quote)
+   (delete-if
+    #'null
+    (apply
+     #'vector
+     (alexandria:flatten
+      (list
+       (when *quote*
+         (cond
+           ;; Escape is two adjacent quotes in quoted data
+           ((and (eql *escape-mode* :quote)
+                 (or (null *quote-escape*)
+                     (%escape-is-double-quote)))
+            (make-table-entry *quote* #'reading-quoted-or-escaped))
+           ;; escape is a literal sequence of chars that mean quote
+           ((eql *escape-mode* :quote)
             (list (make-table-entry *quote-escape* #'reading-escaped)
                   (make-table-entry *quote* #'reading-quoted)))
-          ;; escape is a backslash followed by the char being escaped
-          ((eql *escape-mode* :following)
+           ;; escape is a backslash followed by the char being escaped
+           ((eql *escape-mode* :following)
+            (list
+             (make-table-entry
+              (etypecase *quote-escape*
+                (null (vector #\\ t))
+                (string (apply #'vector (append (coerce *quote-escape* 'list) '(t))))
+                (character (vector *quote-escape* t)))
+              #'reading-following-escaped)
+             (make-table-entry *quote* #'reading-quoted)))))
+
+       (make-table-entry *separator* #'reading-separator)
+
+       (if (member *read-newline* '(t nil) :test #'equalp)
            (list
-            (make-table-entry
-             (etypecase *quote-escape*
-               (null (vector #\\ t))
-               (string (apply #'vector (append (coerce *quote-escape* 'list) '(t))))
-               (character (vector *quote-escape* t)))
-             #'reading-following-escaped)
-            (make-table-entry *quote* #'reading-quoted)))))
-
-      (make-table-entry *separator* #'reading-separator)
-
-      (if (member *read-newline* '(t nil) :test #'equalp)
-          (list
-           (make-table-entry (vector #\return #\newline) #'reading-newline)
-           (make-table-entry (vector #\return #\return) #'reading-newline)
-           (make-table-entry (vector #\newline) #'reading-newline))
-          (make-table-entry *read-newline* #'reading-newline))
-      (make-table-entry t #'reading-character)
-      )))))
+            (make-table-entry (vector #\return #\newline) #'reading-newline)
+            (make-table-entry (vector #\return #\return) #'reading-newline)
+            (make-table-entry (vector #\newline) #'reading-newline))
+           (make-table-entry *read-newline* #'reading-newline))
+       (make-table-entry t #'reading-character)
+       ))))))
 
 
 
-(defun check-and-distpatch (table c)
+(declaim (inline check-and-distpatch))
+(defun check-and-distpatch (entries table c)
+  (declare (optimize (speed 3))
+           (type simple-vector entries))
   "Check all the entries in a read-dispatch-table to find a match
    if it matches, call the function with the table character and entry"
-  (iter (for entry in-vector (entries table))
-        (when (typep entry 'read-dispatch-table-entry)
-          (when (check-table-entry table entry c)
-            (funcall (dispatch entry) table c :table-entry entry)
-            (return t)))))
+  (iter
+    (declare (type fixnum i))
+    (for i from 0 below (length entries))
+    (for entry = (svref entries i))
+    (when (check-table-entry table
+                             (the read-dispatch-table-entry entry)
+                             c)
+      (funcall (read-dispatch-table-entry-dispatch
+                (the read-dispatch-table-entry entry))
+               table c :table-entry (the read-dispatch-table-entry entry))
+      (leave t))))
 
 (defun read-with-dispatch-table (table stream &aux (read-cnt 0))
+  (declare (optimize (speed 3)))
   "A generic function for processing all the characters of a stream until
    a match arises and collecting that data as it goes"
   (iter
+    (declare (type vector buffer)
+             (type simple-vector entries))
+    (with entries = (entries table))
+    (with buffer = (buffer table))
     (setf (parse-stream table) stream)
     (for c = (%next-char table))
     (while c)
     (incf read-cnt)
     (cond
-      ((check-and-distpatch table c)
+      ((check-and-distpatch entries table c)
        t                            ;; it handles what to do with the data etc
        )
       (t
        ;; didnt dispatch so store
-       (vector-push-extend c (buffer table)))))
+       (vector-push-extend c buffer))))
   (when (zerop read-cnt)
     (error (make-condition 'end-of-file :stream stream)))
   (when (reading-quoted? table)
