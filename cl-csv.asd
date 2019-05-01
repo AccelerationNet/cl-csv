@@ -11,45 +11,42 @@
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Facilities for reading and writing CSV format files"
   :license "BSD"
-  :version "1.0.6"
+  :version "1.0.7"
   :serial t
   :components ((:file "packages")
                (:file "vars")
                (:file "read-until")
                (:file "csv")
                (:file "parser"))
-  :depends-on (:iterate :alexandria :cl-interpol))
+  :depends-on (:iterate :alexandria :cl-interpol)
+  :in-order-to ((test-op (test-op :cl-csv/test))))
 
 (defsystem :cl-csv/test
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :license "BSD"
-  :version "1.0.6"
+  :version "1.0.7"
   :components ((:module :tests
 			:serial t
-                :components ((:file "csv")
-                             )))
-  :depends-on (:cl-csv :lisp-unit2))
-
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :cl-csv))))
-  (asdf:oos 'asdf:load-op :cl-csv/test)
-  (let ((*package* (find-package :cl-csv/test)))
-    (eval (read-from-string "(run-all-tests)"))))
-
+                :components ((:file "csv"))))
+  :depends-on (:cl-csv :lisp-unit2)
+  :perform (test-op (op system)
+                    (uiop:symbol-call :cl-csv-test 'run-all-tests)))
 
 (defsystem :cl-csv/speed-test
   :author "Russ Tyndall (russ@acceleration.net), Acceleration.net"
   :description "Tests for a library providing a cl-csv class, and useful
      functionality around this"
   :license "BSD"
-  :version "1.0.6"
+  :version "1.0.7"
   :components ((:file "csv-old")
                (:module :tests
 			:serial t
                 :components ((:file "speed"))))
   :depends-on (:cl-csv :cl-csv/test :lisp-unit2))
 
+;; Copyright (c) 2019 Katherine Cox-Buday
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved.
