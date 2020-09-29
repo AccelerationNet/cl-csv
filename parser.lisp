@@ -31,12 +31,12 @@ See: csv-reader "))
     (ignore-errors (format s "~S" (string (buffer o))))))
 
 (defclass read-dispatch-table-entry ()
-  ((delimiter :type (vector (or boolean character))
+  ((delimiter :type (or (vector (or boolean character)) null)
               :accessor delimiter :initarg :delimiter :initform nil)
    (didx :type fixnum :initform -1 :accessor didx :initarg :didx)
    (dlen :type fixnum :initform 0 :accessor dlen :initarg :dlen)
    (dlen-1 :type fixnum :initform -1 :accessor dlen-1 :initarg :dlen-1)
-   (dispatch :type function :initform nil :accessor dispatch  :initarg :dispatch)
+   (dispatch :type (or function null) :initform nil :accessor dispatch  :initarg :dispatch)
    )
   (:documentation "When a certain delimiter is matched it will call a certain function
     T matches anything
