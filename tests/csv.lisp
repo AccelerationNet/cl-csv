@@ -260,7 +260,19 @@ multiline" (nth 3 (first data)) ))
     (assert-equal  "5" b)
     (assert-equal  "6" c)
     (for i from 0)
-    (finally (assert-equal 0 i))))
+    (finally (assert-equal 0 i)))
+
+  ;; test multiple files
+  (assert-equal '(("1" "a" "2" "b") ("3" "c" "4" "d"))
+                (iter (for (x y) in-csv #P"numbers.csv")
+                      (for (u v) in-csv #P"letters.csv")
+                      (collect (list x u y v))))
+
+  ;; test nested reads
+  (assert-equal '(("1" (("a" "b") ("c" "d")) "2") ("3" (("a" "b") ("c" "d")) "4"))
+                (iter (for (x y) in-csv #P"numbers.txt" separator #\Tab)
+                      (collect (list x (read-csv #P"letters.csv") y)))))
+
 
 (define-test sampling-iterate (:tags '(sampling iterate))
   (assert-length

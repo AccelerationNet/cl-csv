@@ -13,7 +13,7 @@
   ((format-control :accessor format-control :initarg :format-control :initform nil)
    (format-args :accessor format-args :initarg :format-args :initform nil))
   (:report (lambda (c s &aux (ctrl (format-control c)))
-	     (typecase ctrl
+             (typecase ctrl
                (condition
                 (format s "CSV-PARSE-ERROR: internal-error ~A" ctrl))
                (string
@@ -245,10 +245,10 @@ always-quote: Defaults to *always-quote*"
       ;; can't bind values in a `with`, so listify and destructure
       (with (,stream ,opened?) = (multiple-value-list
                                   (%in-stream ,input)))
-      (with *separator* = (or ,separator *separator*))
-      (with *quote* = (or ,quote *quote*))
-      (with *quote-escape* = (or ,escaped-quote *quote-escape*))
-      (with ,csv-reader = (make-default-csv-reader))
+      (with ,csv-reader = (let ((*separator* (or ,separator *separator*))
+                                (*quote* (or ,quote *quote*))
+                                (*quote-escape* (or ,escaped-quote *quote-escape*)))
+                            (make-default-csv-reader)))
       (finally-protected
        (when (and ,stream ,opened?)
          (close ,stream)))
@@ -349,7 +349,7 @@ body: body of the macro"
     (stream-or-string
      &rest all-keys
      &key
-     csv-reader row-fn map-fn data-map-fn sample skip-first-p 
+     csv-reader row-fn map-fn data-map-fn sample skip-first-p
      ((:separator *separator*) *separator*)
      ((:quote *quote*) *quote*)
      ((:escape *quote-escape*) *quote-escape*)
