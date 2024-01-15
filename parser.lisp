@@ -229,13 +229,14 @@ See: csv-reader "))
   (let ((row (coerce (line-data csv-reader) 'list)))
     (setf (fill-pointer (line-data csv-reader)) 0)
     (setf row (csv-row-read row :csv-reader csv-reader))
-    (when map-fn
-      (setf row (funcall map-fn row)))
     (if (skip-row? csv-reader)
         (setf (skip-row? csv-reader) nil) ;; we skipped
-        (if row-fn
-            (funcall row-fn row)
-            (vector-push-extend row (rows csv-reader))))))
+        (progn
+          (when map-fn
+            (setf row (funcall map-fn row)))
+          (if row-fn
+              (funcall row-fn row)
+              (vector-push-extend row (rows csv-reader)))))))
 
 (defun drop-delimiter-chars (table entry)
   "This backs up the buffer till the delimiter is not in it
