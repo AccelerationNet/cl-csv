@@ -14,7 +14,7 @@ The code license is found
 1.  [Download](#download)
 2.  [The CL-CSV dictionary](#dictionary)
    1.  [`*default-external-format*`](#*default-external-format*)
-   2.  [`*newline*`](#*newline*)
+   2.  [`*write-newline*`](#*write-newline*)
    3.  [`*quote*`](#*quote*)
    4.  [`*quote-escape*`](#*quote-escape*)
    5.  [`*separator*`](#*separator*)
@@ -45,7 +45,7 @@ _[Special variable]_
 The external format used for opening files
 
 _[Special variable]_
-**\*newline***
+**\*write-newline***
 
  Default newline string
 
@@ -136,7 +136,7 @@ than one line from the stream)
 - - -
 _[Function]_
 **write-csv** (*rows-of-items* `&key` *stream* (separator \*separator\*)
-(quote \*quote\*) (escape \*quote-escape\*) (newline \*newline\*)
+(quote \*quote\*) (escape \*quote-escape\*) (newline \*write-newline\*)
 (always-quote \*always-quote\*) ) =\> \*result\*
 
 Writes a CSV
@@ -151,14 +151,14 @@ quote: quoting character. Defaults to \*quote\*
 
 escape: escaping character. Defaults to \*quote-escape\*
 
-newline: newline character. Defaults to \*newline\*
+newline: newline character. Defaults to \*write-newline\*
 
 always-quote: Defaults to \*always-quote\*
 
 - - -
 _[Function]_
 **write-csv-row** ( *items* `&key` *stream* (separator \*separator\*)
-(quote \*quote\*) (escape \*quote-escape\*) (newline \*newline\*)
+(quote \*quote\*) (escape \*quote-escape\*) (newline \*write-newline\*)
 (always-quote \*always-quote\*) ) =\> \*result*
 
 
@@ -174,7 +174,7 @@ quote: quoting character. Defaults to \*quote\*
 
 escape: escaping character. Defaults to \*quote-escape\*
 
-newline: newline character. Defaults to \*newline\*
+newline: newline character. Defaults to \*write-newline\*
 
 always-quote: Defaults to \*always-quote\*
 
@@ -199,7 +199,7 @@ quote: quoting character. Defaults to \*quote*
 
 escape: escaping character. Defaults to \*quote-escape*
 
-newline: newline character. Defaults to \*newline*
+newline: newline character. Defaults to \*write-newline*
 
 always-quote: Defaults to \*always-quote*
 
