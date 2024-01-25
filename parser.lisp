@@ -31,12 +31,12 @@ See: csv-reader "))
     (ignore-errors (format s "~S" (string (buffer o))))))
 
 (defclass read-dispatch-table-entry ()
-  ((delimiter :type (vector (or boolean character))
+  ((delimiter :type (or (vector (or boolean character)) null)
               :accessor delimiter :initarg :delimiter :initform nil)
    (didx :type fixnum :initform -1 :accessor didx :initarg :didx)
    (dlen :type fixnum :initform 0 :accessor dlen :initarg :dlen)
    (dlen-1 :type fixnum :initform -1 :accessor dlen-1 :initarg :dlen-1)
-   (dispatch :type function :initform nil :accessor dispatch  :initarg :dispatch)
+   (dispatch :type (or function null) :initform nil :accessor dispatch  :initarg :dispatch)
    )
   (:documentation "When a certain delimiter is matched it will call a certain function
     T matches anything
@@ -229,13 +229,14 @@ See: csv-reader "))
   (let ((row (coerce (line-data csv-reader) 'list)))
     (setf (fill-pointer (line-data csv-reader)) 0)
     (setf row (csv-row-read row :csv-reader csv-reader))
-    (when map-fn
-      (setf row (funcall map-fn row)))
     (if (skip-row? csv-reader)
         (setf (skip-row? csv-reader) nil) ;; we skipped
-        (if row-fn
-            (funcall row-fn row)
-            (vector-push-extend row (rows csv-reader))))))
+        (progn
+          (when map-fn
+            (setf row (funcall map-fn row)))
+          (if row-fn
+              (funcall row-fn row)
+              (vector-push-extend row (rows csv-reader)))))))
 
 (defun drop-delimiter-chars (table entry)
   "This backs up the buffer till the delimiter is not in it
