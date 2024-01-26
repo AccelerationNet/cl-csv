@@ -1,6 +1,6 @@
 
 (defpackage :cl-csv-test.speed-tests
-  (:use :cl :cl-user :cl-csv :lisp-unit2 :iter))
+  (:use :cl :cl-csv :lisp-unit2 :iter))
 
 (in-package :cl-csv-test.speed-tests)
 

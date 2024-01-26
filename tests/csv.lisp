@@ -1,5 +1,5 @@
 (defpackage :cl-csv-test
-  (:use :cl :cl-user :cl-csv :lisp-unit2 :iter))
+  (:use :cl :cl-csv :lisp-unit2 :iter))
 
 (in-package :cl-csv-test)
 (cl-interpol:enable-interpol-syntax)
