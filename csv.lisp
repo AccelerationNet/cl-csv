@@ -306,7 +306,7 @@ always-quote: Defaults to *always-quote*"
      (return
        (iter (for row in sample)
          (when map-fn (setf row (funcall map-fn row)))
-         (when row-fn (funcall row-fn sample))
+         (when row-fn (funcall row-fn row))
          (collect row))))))
 
 
